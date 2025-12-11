@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cases - AdvocateDesk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af',
+                        secondary: '#6366f1',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Mobile Menu Button -->
+    <button id="mobile-menu-btn"
+        class="lg:hidden fixed top-4 right-4 z-50 bg-primary text-white p-3 rounded-lg shadow-lg">
+        <i class="fas fa-bars text-xl"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+        class="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-primary to-blue-900 text-white transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-40 shadow-2xl">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-8">
+                <i class="fas fa-balance-scale text-3xl"></i>
+                <h1 class="text-2xl font-bold">AdvocateDesk</h1>
+            </div>
+            <nav class="space-y-2">
+                <a href="index.html"
+                    class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition">
+                    <i class="fas fa-home w-5"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="clients.html"
+                    class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition">
+                    <i class="fas fa-users w-5"></i>
+                    <span>Clients</span>
+                </a>
+                <a href="cases.html"
+                    class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition active bg-white/20">
+                    <i class="fas fa-folder-open w-5"></i>
+                    <span>Cases</span>
+                </a>
+                <a href="#calendar"
+                    class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition">
+                    <i class="fas fa-calendar-alt w-5"></i>
+                    <span>Calendar</span>
+                </a>
+                <a href="payments.html"
+                    class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition">
+                    <i class="fas fa-money-bill-wave w-5"></i>
+                    <span>Payments</span>
+                </a>
+                <a href="#documents"
+                    class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition">
+                    <i class="fas fa-file-alt w-5"></i>
+                    <span>Documents</span>
+                </a>
+                <a href="#reports" class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition">
+                    <i class="fas fa-chart-bar w-5"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="#settings"
+                    class="nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-white/20 transition">
+                    <i class="fas fa-cog w-5"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </div>
+        <div class="absolute bottom-0 w-full p-6 border-t border-white/20">
+            <div class="flex items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name=Gaurav+Sharma&background=6366f1&color=fff"
+                    class="w-10 h-10 rounded-full">
+                <div>
+                    <p class="font-semibold">Gaurav Sharma</p>
+                    <p class="text-xs text-gray-300">Advocate</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm sticky top-0 z-30">
+            <div class="px-4 lg:px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Case Management</h2>
+                        <p class="text-sm text-gray-600">Track and manage all your cases</p>
+                    </div>
+                    <button id="addCaseBtn"
+                        class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                        <i class="fas fa-plus"></i>
+                        <span class="hidden md:inline">Add New Case</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="p-4 lg:p-8">
+            <!-- Filters -->
+            <div class="bg-white rounded-xl shadow-md p-4 lg:p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <div class="relative">
+                            <i
+                                class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" placeholder="Search cases..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                    </div>
+                    <select
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option>All Types</option>
+                        <option>NI</option>
+                        <option>OS</option>
+                        <option>PASSA</option>
+                        <option>CR</option>
+                    </select>
+                    <select
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option>All Status</option>
+                        <option>Pending</option>
+                        <option>Notice</option>
+                        <option>Summon</option>
+                        <option>Settled</option>
+                    </select>
+                    <select
+                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option>All Courts</option>
+                        <option>PLA</option>
+                        <option>Judicial Magistrate</option>
+                        <option>Civil Judge</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Cases List -->
+            <div class="space-y-4">
+                <!-- Case Card 1 -->
+                <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span
+                                        class="bg-blue-600 text-white px-4 py-1 rounded-full font-bold text-sm">4641/17</span>
+                                    <span
+                                        class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">NI</span>
+                                    <span
+                                        class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">Pending</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">HDB Financial Services Ltd vs Avinash
+                                    Choudhary</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-gavel text-primary"></i>
+                                        <span>Judicial Magistrate-2</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-primary"></i>
+                                        <span>Next Date: 27-11-25</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-user text-primary"></i>
+                                        <span>Client: Avinash Choudhary</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                                    <i class="fas fa-eye mr-2"></i>View
+                                </button>
+                                <button
+                                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case Card 2 -->
+                <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span
+                                        class="bg-green-600 text-white px-4 py-1 rounded-full font-bold text-sm">3295/22</span>
+                                    <span
+                                        class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">OS</span>
+                                    <span
+                                        class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">Settled</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">Anil Prasad vs SBI (YES Bank)</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-gavel text-green-600"></i>
+                                        <span>PLA</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-green-600"></i>
+                                        <span>Last Date: 27-11-25</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-user text-green-600"></i>
+                                        <span>Client: Anil Prasad</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                                    <i class="fas fa-eye mr-2"></i>View
+                                </button>
+                                <button
+                                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case Card 3 -->
+                <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span
+                                        class="bg-purple-600 text-white px-4 py-1 rounded-full font-bold text-sm">5342/25</span>
+                                    <span
+                                        class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">PASSA</span>
+                                    <span
+                                        class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">Summon</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">Manappuram Finance Ltd vs Mehraj Nafiz
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-gavel text-purple-600"></i>
+                                        <span>Add. Civil Judge (SD) 5th</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-purple-600"></i>
+                                        <span>PARVI: 21-07-25</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-rupee-sign text-purple-600"></i>
+                                        <span>Claim: ₹25,094</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                                    <i class="fas fa-eye mr-2"></i>View
+                                </button>
+                                <button
+                                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case Card 4 -->
+                <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span
+                                        class="bg-indigo-600 text-white px-4 py-1 rounded-full font-bold text-sm">5341/25</span>
+                                    <span
+                                        class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-semibold">PASSA</span>
+                                    <span
+                                        class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">Summon</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">Manappuram Finance Ltd vs Mohd Rayis
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-gavel text-indigo-600"></i>
+                                        <span>Add. Civil Judge (SD) 5th</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-indigo-600"></i>
+                                        <span>PARVI: 21-07-25</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-rupee-sign text-indigo-600"></i>
+                                        <span>Claim: ₹91,835</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                                    <i class="fas fa-eye mr-2"></i>View
+                                </button>
+                                <button
+                                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Case Card 5 -->
+                <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span
+                                        class="bg-red-600 text-white px-4 py-1 rounded-full font-bold text-sm">1823/25</span>
+                                    <span
+                                        class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">NI</span>
+                                    <span
+                                        class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">Notice</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">Shri Ram Finance Ltd vs Nisha Khan</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-gavel text-red-600"></i>
+                                        <span>ACJM-III</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-red-600"></i>
+                                        <span>Next Date: 23-12-25</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-rupee-sign text-red-600"></i>
+                                        <span>Claim: ₹3,18,953</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+                                    <i class="fas fa-eye mr-2"></i>View
+                                </button>
+                                <button
+                                    class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="mt-8 flex justify-center">
+                <nav class="flex gap-2">
+                    <button class="px-3 py-2 bg-white rounded-lg shadow hover:bg-gray-100 transition">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="px-4 py-2 bg-primary text-white rounded-lg shadow">1</button>
+                    <button class="px-4 py-2 bg-white rounded-lg shadow hover:bg-gray-100 transition">2</button>
+                    <button class="px-4 py-2 bg-white rounded-lg shadow hover:bg-gray-100 transition">3</button>
+                    <button class="px-3 py-2 bg-white rounded-lg shadow hover:bg-gray-100 transition">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Case Modal -->
+    <div id="addCaseModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-primary to-blue-700 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-bold">Add New Case</h3>
+                    <button id="closeModal" class="text-white hover:text-gray-200">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <form class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Case Number *</label>
+                        <input type="text"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="e.g., 4641/17">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Case Type *</label>
+                        <select
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option>Select Type</option>
+                            <option>NI (Negotiable Instrument)</option>
+                            <option>OS (Original Suit)</option>
+                            <option>PASSA</option>
+                            <option>CR (Criminal)</option>
+                            <option>CONS (Consumer)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Plaintiff *</label>
+                        <input type="text"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Plaintiff name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Defendant *</label>
+                        <input type="text"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Defendant name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Court *</label>
+                        <input type="text"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Court name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Status *</label>
+                        <select
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option>Select Status</option>
+                            <option>Notice</option>
+                            <option>Summon</option>
+                            <option>Pending</option>
+                            <option>Evidence</option>
+                            <option>Settled</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Filing Date</label>
+                        <input type="date"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Next Hearing Date</label>
+                        <input type="date"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Claim Amount</label>
+                        <input type="number"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="₹">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">CNR Number</label>
+                        <input type="text"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="CNR Number">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Case Details</label>
+                    <textarea rows="3"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter case details and notes..."></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit"
+                        class="flex-1 bg-primary text-white py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
+                        <i class="fas fa-save mr-2"></i>Save Case
+                    </button>
+                    <button type="button" id="cancelModal"
+                        class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 transition font-semibold">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('sidebar');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+            const icon = mobileMenuBtn.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        // Modal functionality
+        const addCaseBtn = document.getElementById('addCaseBtn');
+        const addCaseModal = document.getElementById('addCaseModal');
+        const closeModal = document.getElementById('closeModal');
+        const cancelModal = document.getElementById('cancelModal');
+
+        addCaseBtn.addEventListener('click', () => {
+            addCaseModal.classList.remove('hidden');
+        });
+
+        closeModal.addEventListener('click', () => {
+            addCaseModal.classList.add('hidden');
+        });
+
+        cancelModal.addEventListener('click', () => {
+            addCaseModal.classList.add('hidden');
+        });
+
+        addCaseModal.addEventListener('click', (e) => {
+            if (e.target === addCaseModal) {
+                addCaseModal.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>
