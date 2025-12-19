@@ -7,7 +7,7 @@
     <title>Admin Panel - Listings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./assets/style.css">
 </head>
 
 <body class="bg-gradient-to-br from-gray-200 via-gray-100 to-slate-200 min-h-screen">
@@ -25,7 +25,7 @@
         <?php include './includes/footer.php'; ?>
     </div>
 
-    <script src="script.js"></script>
+    <script src="./assets/script.js"></script>
 </body>
 
 </html>

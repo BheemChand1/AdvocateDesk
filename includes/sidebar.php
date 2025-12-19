@@ -3,11 +3,11 @@
     <div class="sidebar-header">
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <i class="fas fa-gavel text-white"></i>
+                <i class="fas fa-balance-scale text-white"></i>
             </div>
             <div>
-                <h2 class="text-gray-800 font-bold text-lg">Admin</h2>
-                <p class="text-gray-600 text-xs">Management System</p>
+                <h2 class="text-gray-800 font-bold text-base">Case Management</h2>
+                <p class="text-gray-600 text-xs">System Panel</p>
             </div>
         </div>
     </div>
@@ -52,7 +52,7 @@
             <span>Account Management</span>
         </a>
 
-        <div class="sidebar-section-title">Management</div>
+        <!-- <div class="sidebar-section-title">Management</div>
         <a href="#" class="sidebar-item">
             <i class="fas fa-file-alt"></i>
             <span>Case Types</span>
@@ -68,9 +68,9 @@
         <a href="#" class="sidebar-item">
             <i class="fas fa-tasks"></i>
             <span>Case Stages</span>
-        </a>
+        </a> -->
 
-        <div class="sidebar-section-title">Reports & Settings</div>
+        <!-- <div class="sidebar-section-title">Reports & Settings</div>
         <a href="#" class="sidebar-item">
             <i class="fas fa-chart-bar"></i>
             <span>Reports</span>
@@ -82,6 +82,6 @@
         <a href="#" class="sidebar-item">
             <i class="fas fa-bell"></i>
             <span>Notifications</span>
-        </a>
+        </a> -->
     </nav>
 </aside>

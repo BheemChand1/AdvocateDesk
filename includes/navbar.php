@@ -12,10 +12,10 @@
                     <i class="fas fa-bars text-gray-800"></i>
                 </button>
                 <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center lg:hidden">
-                    <i class="fas fa-gavel text-white"></i>
+                    <i class="fas fa-balance-scale text-white"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800 hidden sm:block">Admin Panel</h1>
-                <h1 class="text-xl font-bold text-gray-800 sm:hidden">Admin Panel</h1>
+                <h1 class="text-2xl font-bold text-gray-800 hidden sm:block">Case Management System</h1>
+                <h1 class="text-lg font-bold text-gray-800 sm:hidden">CMS Panel</h1>
             </div>
             <div class="flex items-center space-x-4">
                 <button class="p-2 rounded-lg hover:bg-gray-600/50 transition" id="refreshBtn" title="Refresh">
@@ -26,13 +26,13 @@
                         <i class="fas fa-user text-white text-sm"></i>
                     </div>
                     <div class="hidden lg:block">
-                        <div class="text-sm font-semibold text-gray-800">Admin User</div>
-                        <div class="text-xs text-gray-600">Administrator</div>
+                        <div class="text-sm font-semibold text-gray-800"><?php echo isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name']) : 'User'; ?></div>
+                        <div class="text-xs text-gray-600"><?php echo isset($_SESSION['user_role']) ? ucfirst(htmlspecialchars($_SESSION['user_role'])) : 'Member'; ?></div>
                     </div>
                 </div>
-                <button class="p-2 rounded-lg hover:bg-gray-600/50 transition" title="Logout">
+                <a href="logout.php" class="p-2 rounded-lg hover:bg-gray-600/50 transition" title="Logout">
                     <i class="fas fa-sign-out-alt text-gray-600 hover:text-gray-800"></i>
-                </button>
+                </a>
             </div>
         </div>
     </div>

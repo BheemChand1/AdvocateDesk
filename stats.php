@@ -1,21 +1,10 @@
-<?php
-session_start();
-
-// Check if user is logged in
-if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true) {
-    header("Location: login.php");
-    exit();
-}
-
-require_once 'includes/connection.php';
-?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Case Management</title>
+    <title>Admin Panel - Listings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./assets/style.css">
