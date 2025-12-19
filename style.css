@@ -14,7 +14,6 @@ body {
     backdrop-filter: blur(10px);
     border-right: 1px solid rgba(209, 213, 219, 0.8);
     z-index: 100;
-    transition: transform 0.3s ease;
     overflow-y: auto;
 }
 
@@ -46,7 +45,6 @@ body {
     padding: 0.875rem 1.5rem;
     color: rgba(55, 65, 81, 1);
     text-decoration: none;
-    transition: all 0.2s ease;
     cursor: pointer;
     border-left: 3px solid transparent;
     font-size: 0.975rem;
@@ -71,6 +69,65 @@ body {
     width: 22px;
     text-align: center;
     font-size: 1.1rem;
+}
+
+/* Dropdown Styles */
+.sidebar-dropdown {
+    position: relative;
+}
+
+.sidebar-item.has-dropdown {
+    position: relative;
+    padding-right: 2.5rem;
+}
+
+.sidebar-item.has-dropdown .dropdown-icon {
+    position: absolute;
+    right: 1.5rem;
+    font-size: 0.75rem;
+}
+
+.sidebar-dropdown.active .has-dropdown .dropdown-icon {
+    transform: rotate(180deg);
+}
+
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    background: rgba(243, 244, 246, 0.5);
+}
+
+.sidebar-dropdown.active .submenu {
+    max-height: 200px;
+}
+
+.submenu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem 0.75rem 3.5rem;
+    color: rgba(75, 85, 99, 1);
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.submenu-item:hover {
+    background: rgba(229, 231, 235, 0.8);
+    color: rgba(17, 24, 39, 1);
+}
+
+.submenu-item.active {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1e40af;
+    font-weight: 600;
+}
+
+.submenu-item i {
+    margin-right: 0.5rem;
+    width: 18px;
+    text-align: center;
+    font-size: 0.9rem;
 }
 
 .sidebar-section-title {
@@ -100,7 +157,6 @@ body {
 /* Main Content Area */
 .main-content {
     margin-left: 260px;
-    transition: margin-left 0.3s ease;
 }
 
 .main-content.expanded {
@@ -109,12 +165,7 @@ body {
 
 /* Stat Card Styles */
 .stat-card {
-    transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    /* No animations for better performance */
 }
 
 /* Gradient Backgrounds */

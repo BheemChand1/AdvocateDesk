@@ -1,16 +1,6 @@
-// Counter animation function
-function animateCounter(element, target) {
-  let current = 0;
-  const increment = target / 50;
-  const timer = setInterval(() => {
-    current += increment;
-    if (current >= target) {
-      element.textContent = target.toLocaleString();
-      clearInterval(timer);
-    } else {
-      element.textContent = Math.floor(current).toLocaleString();
-    }
-  }, 30);
+// Display counters instantly (no animation)
+function displayCounter(element, target) {
+  element.textContent = target.toLocaleString();
 }
 
 // Initialize counters when page loads
@@ -18,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const counters = document.querySelectorAll(".counter");
   counters.forEach((counter) => {
     const target = parseInt(counter.getAttribute("data-target"));
-    animateCounter(counter, target);
+    displayCounter(counter, target);
   });
 
   // Update time
@@ -66,11 +56,25 @@ function initSidebar() {
   const sidebarItems = document.querySelectorAll(".sidebar-item");
   sidebarItems.forEach((item) => {
     item.addEventListener("click", (e) => {
-      // Remove active class from all items
-      sidebarItems.forEach((i) => i.classList.remove("active"));
-      // Add active class to clicked item
-      item.classList.add("active");
+      // Check if item has dropdown
+      if (item.classList.contains("has-dropdown")) {
+        e.preventDefault();
+        const dropdown = item.closest(".sidebar-dropdown");
+        dropdown.classList.toggle("active");
+        return;
+      }
 
+      // Close sidebar on mobile after clicking
+      if (window.innerWidth <= 1024) {
+        sidebar.classList.remove("show");
+      }
+    });
+  });
+
+  // Handle submenu items
+  const submenuItems = document.querySelectorAll(".submenu-item");
+  submenuItems.forEach((item) => {
+    item.addEventListener("click", (e) => {
       // Close sidebar on mobile after clicking
       if (window.innerWidth <= 1024) {
         sidebar.classList.remove("show");
@@ -89,26 +93,13 @@ function updateTime() {
 
 // Refresh button functionality
 document.getElementById("refreshBtn").addEventListener("click", function () {
-  this.style.animation = "spin 1s linear";
-  setTimeout(() => {
-    location.reload();
-  }, 500);
+  location.reload();
 });
 
 // Theme toggle (for future dark/light mode implementation)
 document.getElementById("themeBtn").addEventListener("click", function () {
   console.log("Theme toggle clicked");
 });
-
-// Add spin animation
-const style = document.createElement("style");
-style.textContent = `
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-`;
-document.head.appendChild(style);
 
 // Smooth scroll for navigation links
 document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
@@ -121,15 +112,31 @@ document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
   });
 });
 
-// Add hover animation to stat cards
-document.querySelectorAll(".stat-card").forEach((card) => {
-  card.addEventListener("mouseenter", function () {
-    this.style.transform = "translateY(-5px)";
+// Handle Create Client Form Submission
+const createClientForm = document.getElementById("createClientForm");
+if (createClientForm) {
+  createClientForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    // Get form data
+    const formData = new FormData(this);
+    const clientData = Object.fromEntries(formData.entries());
+
+    // Show success message
+    alert(
+      "Client created successfully!\n\nClient Details:\n" +
+        JSON.stringify(clientData, null, 2)
+    );
+
+    // Reset form
+    this.reset();
+
+    // Optional: Redirect to view clients page
+    // window.location.href = 'view-clients.html';
   });
-  card.addEventListener("mouseleave", function () {
-    this.style.transform = "translateY(0)";
-  });
-});
+}
+
+// Stat cards have no animations for better performance
 
 // Responsive menu toggle (for future mobile menu implementation)
 const checkViewportWidth = () => {
@@ -140,15 +147,4 @@ const checkViewportWidth = () => {
 window.addEventListener("resize", checkViewportWidth);
 checkViewportWidth();
 
-// Add data refresh simulation
-function simulateDataRefresh() {
-  const counters = document.querySelectorAll(".counter");
-  counters.forEach((counter) => {
-    const originalTarget = parseInt(counter.getAttribute("data-target"));
-    const newTarget = originalTarget + Math.floor(Math.random() * 100);
-    animateCounter(counter, newTarget);
-  });
-}
-
-// Auto-refresh data every 5 minutes
-setInterval(simulateDataRefresh, 300000);
+// Data refresh disabled for better performance
