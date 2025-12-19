@@ -11,137 +11,11 @@
 </head>
 
 <body class="bg-gradient-to-br from-gray-200 via-gray-100 to-slate-200 min-h-screen">
-    <!-- Mobile Menu Toggle -->
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-        <i class="fas fa-bars text-xl"></i>
-    </button>
-
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-gavel text-white"></i>
-                </div>
-                <div>
-                    <h2 class="text-gray-800 font-bold text-lg">Admin</h2>
-                    <p class="text-gray-600 text-xs">Management System</p>
-                </div>
-            </div>
-        </div>
-
-        <nav class="sidebar-menu">
-            <div class="sidebar-section-title">Main Menu</div>
-            <a href="index.html" class="sidebar-item active">
-                <i class="fas fa-th-large"></i>
-                <span>Dashboard</span>
-            </a>
-            <div class="sidebar-dropdown">
-                <a href="#" class="sidebar-item has-dropdown">
-                    <i class="fas fa-users"></i>
-                    <span>Clients</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </a>
-                <div class="submenu">
-                    <a href="create-client.html" class="submenu-item">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Create Client</span>
-                    </a>
-                    <a href="view-clients.html" class="submenu-item">
-                        <i class="fas fa-list"></i>
-                        <span>View Clients</span>
-                    </a>
-                </div>
-            </div>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-user-slash"></i>
-                <span>Defendants</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-briefcase"></i>
-                <span>Cases</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Parvi Dates</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-wallet"></i>
-                <span>Account Management</span>
-            </a>
-
-            <div class="sidebar-section-title">Management</div>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-file-alt"></i>
-                <span>Case Types</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-balance-scale"></i>
-                <span>Court Types</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-envelope"></i>
-                <span>Notices</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-tasks"></i>
-                <span>Case Stages</span>
-            </a>
-
-            <div class="sidebar-section-title">Reports & Settings</div>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-chart-bar"></i>
-                <span>Reports</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
-            </a>
-            <a href="#" class="sidebar-item">
-                <i class="fas fa-bell"></i>
-                <span>Notifications</span>
-            </a>
-        </nav>
-    </aside>
+    <?php include './includes/sidebar.php'; ?>
 
     <!-- Main Content -->
     <div class="main-content" id="mainContent">
-        <!-- Header -->
-        <header class="bg-white/80 backdrop-blur-md border-b border-gray-300 sticky top-0 z-50">
-            <div class="px-4 sm:px-6 lg:px-8 py-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <button class="lg:hidden p-2 rounded-lg hover:bg-gray-200 transition" id="sidebarToggle">
-                            <i class="fas fa-bars text-gray-800"></i>
-                        </button>
-                        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center lg:hidden">
-                            <i class="fas fa-gavel text-white"></i>
-                        </div>
-                        <h1 class="text-2xl font-bold text-gray-800 hidden sm:block">Admin Panel</h1>
-                        <h1 class="text-xl font-bold text-gray-800 sm:hidden">Admin Panel</h1>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <button class="p-2 rounded-lg hover:bg-gray-600/50 transition" id="refreshBtn" title="Refresh">
-                            <i class="fas fa-sync-alt text-gray-600 hover:text-gray-800"></i>
-                        </button>
-                        <div
-                            class="hidden md:flex items-center space-x-3 px-3 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-gray-300">
-                            <div
-                                class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                <i class="fas fa-user text-white text-sm"></i>
-                            </div>
-                            <div class="hidden lg:block">
-                                <div class="text-sm font-semibold text-gray-800">Admin User</div>
-                                <div class="text-xs text-gray-600">Administrator</div>
-                            </div>
-                        </div>
-                        <button class="p-2 rounded-lg hover:bg-gray-600/50 transition" title="Logout">
-                            <i class="fas fa-sign-out-alt text-gray-600 hover:text-gray-800"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <?php include './includes/navbar.php'; ?>
 
         <!-- Main Content -->
         <main class="px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -313,21 +187,10 @@
                         <p class="text-gray-800 font-semibold">Connected</p>
                     </div>
                 </div>
+            </div>
         </main>
 
-        <!-- Footer -->
-        <footer class="bg-white/60 border-t border-gray-300 mt-12 sm:mt-16">
-            <div class="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                <div class="flex flex-col sm:flex-row justify-between items-center text-gray-600 text-sm">
-                    <p>&copy; 2025 Admin Panel. All rights reserved.</p>
-                    <div class="flex space-x-6 mt-4 sm:mt-0">
-                        <a href="#" class="hover:text-gray-800 transition">Privacy Policy</a>
-                        <a href="#" class="hover:text-gray-800 transition">Terms of Service</a>
-                        <a href="#" class="hover:text-gray-800 transition">Support</a>
-                    </div>
-                </div>
-            </div>
-        </footer>
+        <?php include './includes/footer.php'; ?>
     </div>
 
     <script src="script.js"></script>
