@@ -41,6 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             mysqli_stmt_bind_param($update_stmt, "i", $user['id']);
             mysqli_stmt_execute($update_stmt);
             
+            // Handle Remember Me
+            if (isset($_POST['remember']) && $_POST['remember'] == 'on') {
+                // Set cookie for 30 days
+                $cookie_value = base64_encode($user['id'] . ':' . $user['username']);
+                setcookie('remember_user', $cookie_value, time() + (86400 * 30), "/"); // 30 days
+            } else {
+                // Clear cookie if remember me is not checked
+                if (isset($_COOKIE['remember_user'])) {
+                    setcookie('remember_user', '', time() - 3600, "/");
+                }
+            }
+            
             // Redirect to user dashboard
             header("Location: index.php");
             exit();

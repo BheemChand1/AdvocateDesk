@@ -1,3 +1,51 @@
+<?php
+session_start();
+
+// If already logged in, redirect to dashboard
+if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'] === true) {
+    header("Location: index.php");
+    exit();
+}
+
+// Check for remember me cookie and auto-login
+if (isset($_COOKIE['remember_user']) && !isset($_SESSION['user_logged_in'])) {
+    require_once 'includes/connection.php';
+    
+    $cookie_value = base64_decode($_COOKIE['remember_user']);
+    list($user_id, $username) = explode(':', $cookie_value);
+    
+    // Verify user still exists and is active
+    $sql = "SELECT * FROM admin_users WHERE id = ? AND username = ? AND role = 'user' AND status = 'active' LIMIT 1";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, "is", $user_id, $username);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (mysqli_num_rows($result) == 1) {
+        $user = mysqli_fetch_assoc($result);
+        
+        // Set session variables
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_username'] = $user['username'];
+        $_SESSION['user_name'] = $user['full_name'];
+        $_SESSION['user_role'] = $user['role'];
+        $_SESSION['user_logged_in'] = true;
+        
+        // Update last login
+        $update_sql = "UPDATE admin_users SET last_login = NOW() WHERE id = ?";
+        $update_stmt = mysqli_prepare($conn, $update_sql);
+        mysqli_stmt_bind_param($update_stmt, "i", $user['id']);
+        mysqli_stmt_execute($update_stmt);
+        
+        // Redirect to dashboard
+        header("Location: index.php");
+        exit();
+    } else {
+        // Invalid cookie, clear it
+        setcookie('remember_user', '', time() - 3600, "/");
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 

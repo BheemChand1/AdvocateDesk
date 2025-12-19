@@ -35,13 +35,28 @@
                 </a>
             </div>
         </div>
-        <a href="#" class="sidebar-item">
+       
+        <div class="sidebar-dropdown">
+            <a href="#" class="sidebar-item has-dropdown">
+                <i class="fas fa-briefcase"></i>
+                <span>Cases</span>
+                <i class="fas fa-chevron-down dropdown-icon"></i>
+            </a>
+            <div class="submenu">
+                <a href="create-case.php" class="submenu-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Create Case</span>
+                </a>
+                <a href="view-cases.php" class="submenu-item">
+                    <i class="fas fa-list"></i>
+                    <span>View Cases</span>
+                </a>
+            </div>
+        </div>
+
+         <!-- <a href="#" class="sidebar-item">
             <i class="fas fa-user-slash"></i>
             <span>Defendants</span>
-        </a>
-        <a href="#" class="sidebar-item">
-            <i class="fas fa-briefcase"></i>
-            <span>Cases</span>
         </a>
         <a href="#" class="sidebar-item">
             <i class="fas fa-calendar-alt"></i>
@@ -50,7 +65,7 @@
         <a href="#" class="sidebar-item">
             <i class="fas fa-wallet"></i>
             <span>Account Management</span>
-        </a>
+        </a> -->
 
         <!-- <div class="sidebar-section-title">Management</div>
         <a href="#" class="sidebar-item">
