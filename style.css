@@ -388,10 +388,17 @@ select:focus {
 /* Main Content Area */
 .main-content {
     margin-left: 260px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .main-content.expanded {
     margin-left: 0;
+}
+
+.main-content main {
+    flex: 1;
 }
 
 /* Stat Card Styles */

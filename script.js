@@ -85,21 +85,30 @@ function initSidebar() {
 
 // Update last updated time
 function updateTime() {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  document.getElementById("updateTime").textContent = `${hours}:${minutes}`;
+  const updateTimeElement = document.getElementById("updateTime");
+  if (updateTimeElement) {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    updateTimeElement.textContent = `${hours}:${minutes}`;
+  }
 }
 
 // Refresh button functionality
-document.getElementById("refreshBtn").addEventListener("click", function () {
-  location.reload();
-});
+const refreshBtn = document.getElementById("refreshBtn");
+if (refreshBtn) {
+  refreshBtn.addEventListener("click", function () {
+    location.reload();
+  });
+}
 
 // Theme toggle (for future dark/light mode implementation)
-document.getElementById("themeBtn").addEventListener("click", function () {
-  console.log("Theme toggle clicked");
-});
+const themeBtn = document.getElementById("themeBtn");
+if (themeBtn) {
+  themeBtn.addEventListener("click", function () {
+    console.log("Theme toggle clicked");
+  });
+}
 
 // Smooth scroll for navigation links
 document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
