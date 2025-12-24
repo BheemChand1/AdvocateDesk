@@ -52,6 +52,16 @@
                                 placeholder="Enter father's name">
                         </div>
 
+                        <!-- Email ID -->
+                        <div class="md:col-span-2">
+                            <label for="email" class="block text-gray-700 text-sm font-semibold mb-2">
+                                <i class="fas fa-envelope mr-2 text-blue-500"></i>Email ID <span class="text-red-500">*</span>
+                            </label>
+                            <input type="email" id="email" name="email" required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="Enter email address">
+                        </div>
+
                         <!-- Mobile Number -->
                         <div>
                             <label for="mobile_number" class="block text-gray-700 text-sm font-semibold mb-2">
@@ -71,6 +81,28 @@
                             <textarea id="address" name="address" required rows="4"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
                                 placeholder="Enter complete address"></textarea>
+                        </div>
+
+                        <!-- GST Number -->
+                        <div>
+                            <label for="gst_number" class="block text-gray-700 text-sm font-semibold mb-2">
+                                <i class="fas fa-file-invoice mr-2 text-blue-500"></i>GST Number
+                            </label>
+                            <input type="text" id="gst_number" name="gst_number" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}" maxlength="15"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="e.g., 22AAAAA0000A1Z5">
+                            <p class="text-xs text-gray-500 mt-1">15 character GST number (optional)</p>
+                        </div>
+
+                        <!-- PAN Card Number -->
+                        <div>
+                            <label for="pan_number" class="block text-gray-700 text-sm font-semibold mb-2">
+                                <i class="fas fa-id-card mr-2 text-blue-500"></i>PAN Card Number
+                            </label>
+                            <input type="text" id="pan_number" name="pan_number" pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}" maxlength="10"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="e.g., ABCDE1234F" style="text-transform: uppercase;">
+                            <p class="text-xs text-gray-500 mt-1">10 character PAN number (optional)</p>
                         </div>
                     </div>
 
