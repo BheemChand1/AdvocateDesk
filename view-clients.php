@@ -58,8 +58,11 @@
                                 <th class="px-6 py-4 text-left text-sm font-semibold">ID</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Full Name</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Father's Name</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Email</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Mobile Number</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Address</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">GST Number</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">PAN Card</th>
                                 <th class="px-6 py-4 text-center text-sm font-semibold">Actions</th>
                             </tr>
                         </thead>
@@ -69,8 +72,11 @@
                                 <td class="px-6 py-4 text-sm text-gray-900">1</td>
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900">Ramesh Kumar</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">Suresh Kumar</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">ramesh@example.com</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">9876543210</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">123 Main Street, Delhi</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">22AAAAA0000A1Z5</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">ABCDE1234F</td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-center space-x-3">
                                         <a href="client-details.php?id=1" class="text-blue-600 hover:text-blue-800 transition" title="View Details">
@@ -90,8 +96,11 @@
                                 <td class="px-6 py-4 text-sm text-gray-900">2</td>
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900">Priya Sharma</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">Raj Sharma</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">priya@example.com</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">9876543211</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">456 Park Avenue, Mumbai</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">27BBBBB1111B2Z6</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">FGHIJ5678K</td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-center space-x-3">
                                         <a href="client-details.php?id=2" class="text-blue-600 hover:text-blue-800 transition" title="View Details">
@@ -111,8 +120,11 @@
                                 <td class="px-6 py-4 text-sm text-gray-900">3</td>
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900">Amit Patel</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">Vikram Patel</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">amit@example.com</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">9876543212</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">789 Lake Road, Bangalore</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">29CCCCC2222C3Z7</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">LMNOP9012Q</td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-center space-x-3">
                                         <a href="client-details.php?id=3" class="text-blue-600 hover:text-blue-800 transition" title="View Details">
@@ -147,12 +159,24 @@
                                 <span class="ml-2"><strong>Father:</strong> Suresh Kumar</span>
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-envelope w-5 text-blue-500"></i>
+                                <span class="ml-2">ramesh@example.com</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-phone w-5 text-blue-500"></i>
                                 <span class="ml-2">9876543210</span>
                             </div>
                             <div class="flex items-start text-sm text-gray-600">
                                 <i class="fas fa-map-marker-alt w-5 text-blue-500 mt-1"></i>
                                 <span class="ml-2">123 Main Street, Delhi</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-file-invoice w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>GST:</strong> 22AAAAA0000A1Z5</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-id-card w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>PAN:</strong> ABCDE1234F</span>
                             </div>
                         </div>
                         <div class="flex items-center justify-end space-x-4 pt-3 border-t border-gray-200">
@@ -182,12 +206,24 @@
                                 <span class="ml-2"><strong>Father:</strong> Raj Sharma</span>
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-envelope w-5 text-blue-500"></i>
+                                <span class="ml-2">priya@example.com</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-phone w-5 text-blue-500"></i>
                                 <span class="ml-2">9876543211</span>
                             </div>
                             <div class="flex items-start text-sm text-gray-600">
                                 <i class="fas fa-map-marker-alt w-5 text-blue-500 mt-1"></i>
                                 <span class="ml-2">456 Park Avenue, Mumbai</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-file-invoice w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>GST:</strong> 27BBBBB1111B2Z6</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-id-card w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>PAN:</strong> FGHIJ5678K</span>
                             </div>
                         </div>
                         <div class="flex items-center justify-end space-x-4 pt-3 border-t border-gray-200">
@@ -217,12 +253,24 @@
                                 <span class="ml-2"><strong>Father:</strong> Vikram Patel</span>
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-envelope w-5 text-blue-500"></i>
+                                <span class="ml-2">amit@example.com</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-phone w-5 text-blue-500"></i>
                                 <span class="ml-2">9876543212</span>
                             </div>
                             <div class="flex items-start text-sm text-gray-600">
                                 <i class="fas fa-map-marker-alt w-5 text-blue-500 mt-1"></i>
                                 <span class="ml-2">789 Lake Road, Bangalore</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-file-invoice w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>GST:</strong> 29CCCCC2222C3Z7</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-id-card w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>PAN:</strong> LMNOP9012Q</span>
                             </div>
                         </div>
                         <div class="flex items-center justify-end space-x-4 pt-3 border-t border-gray-200">
