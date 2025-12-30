@@ -419,7 +419,82 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                     this.closest('tr').remove();
                 });
             });
+
+            // Client Search Functionality
+            const clientSearch = document.getElementById('clientSearch');
+            const clientResults = document.getElementById('clientResults');
+            const selectedClientId = document.getElementById('selectedClientId');
+            const selectedClient = document.getElementById('selectedClient');
+            const selectedClientName = document.getElementById('selectedClientName');
+            const selectedClientDetails = document.getElementById('selectedClientDetails');
+            let searchTimeout;
+
+            clientSearch.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length < 2) {
+                    clientResults.classList.add('hidden');
+                    return;
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    fetch('search-clients.php?q=' + encodeURIComponent(query))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.length > 0) {
+                                clientResults.innerHTML = data.map(client => `
+                                    <div class="client-item p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0" data-id="${client.client_id}" data-name="${client.name}" data-email="${client.email || ''}" data-mobile="${client.mobile || ''}">
+                                        <p class="font-semibold text-gray-800">${client.name}</p>
+                                        <p class="text-xs text-gray-600">${client.email || ''} ${client.mobile ? '| ' + client.mobile : ''}</p>
+                                    </div>
+                                `).join('');
+                                clientResults.classList.remove('hidden');
+                                
+                                // Add click events to client items
+                                document.querySelectorAll('.client-item').forEach(item => {
+                                    item.addEventListener('click', function() {
+                                        const id = this.dataset.id;
+                                        const name = this.dataset.name;
+                                        const email = this.dataset.email;
+                                        const mobile = this.dataset.mobile;
+                                        
+                                        selectedClientId.value = id;
+                                        selectedClientName.textContent = name;
+                                        selectedClientDetails.textContent = `${email} ${mobile ? '| ' + mobile : ''}`;
+                                        
+                                        selectedClient.classList.remove('hidden');
+                                        clientSearch.value = '';
+                                        clientResults.classList.add('hidden');
+                                    });
+                                });
+                            } else {
+                                clientResults.innerHTML = '<div class="p-3 text-gray-500 text-sm">No clients found</div>';
+                                clientResults.classList.remove('hidden');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            clientResults.innerHTML = '<div class="p-3 text-red-500 text-sm">Error searching clients</div>';
+                            clientResults.classList.remove('hidden');
+                        });
+                }, 300);
+            });
+
+            // Hide results when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!clientSearch.contains(e.target) && !clientResults.contains(e.target)) {
+                    clientResults.classList.add('hidden');
+                }
+            });
         });
+
+        function clearClientSelection() {
+            document.getElementById('selectedClientId').value = '';
+            document.getElementById('selectedClient').classList.add('hidden');
+            document.getElementById('clientSearch').value = '';
+        }
     </script>
 </body>
 
