@@ -46,7 +46,6 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
             <!-- Form Card -->
             <div class="bg-white rounded-xl shadow-md p-6 sm:p-8">
                 <form method="POST" action="create-case-process.php">
-                    <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
                     <input type="hidden" name="case_type" value="EP_ARBITRATION">
 
                     <!-- Case Type Display -->
@@ -56,6 +55,34 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                             <div>
                                 <span class="text-sm text-gray-600">Case Type:</span>
                                 <h2 class="text-lg font-bold text-gray-800">EP/Arbitration Executions</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Client Selection -->
+                    <div class="mb-6">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                            <i class="fas fa-user text-blue-500 mr-2"></i>Select Client
+                        </h2>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">clients/retained for</label>
+                                <input type="text" id="clientSearch" placeholder="Search by name, email, or mobile number..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="hidden" name="client_id" id="selectedClientId" required>
+                                <div id="clientResults" class="mt-2 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto"></div>
+                                <div id="selectedClient" class="mt-2 hidden">
+                                    <div class="bg-green-50 border border-green-300 rounded-lg p-3">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-sm font-semibold text-gray-800" id="selectedClientName"></p>
+                                                <p class="text-xs text-gray-600" id="selectedClientDetails"></p>
+                                            </div>
+                                            <button type="button" onclick="clearClientSelection()" class="text-red-500 hover:text-red-700">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -72,14 +99,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Product <span class="text-red-500">*</span></label>
-                                <select name="product" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Select product</option>
-                                    <option value="PL">PL - Personal Loan</option>
-                                    <option value="HL">HL - Home Loan</option>
-                                    <option value="BL">BL - Business Loan</option>
-                                    <option value="AL">AL - Auto Loan</option>
-                                    <option value="GL">GL - Gold Loan</option>
-                                </select>
+                                <input type="text" name="product" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter product">
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Branch Name <span class="text-red-500">*</span></label>
@@ -94,7 +114,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                 <input type="text" name="region" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter region">
                             </div>
                             <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Complainant Authorised Person</label>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">Client Authorised Person</label>
                                 <input type="text" name="complainant_authorised_person" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter authorised person">
                             </div>
                         </div>
@@ -136,66 +156,49 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                     <!-- Decree Holder/Client Information -->
                     <div class="mb-6">
                         <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                            <i class="fas fa-user-tie text-blue-500 mr-2"></i>Decree Holder/CLIENT Information
+                            <i class="fas fa-user-tie text-blue-500 mr-2"></i>Decree Holder Information
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Decree Holder/CLIENT <span class="text-red-500">*</span></label>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">Decree Holder <span class="text-red-500">*</span></label>
                                 <input type="text" name="decree_holder_client" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter decree holder/client name">
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Decree Holder Complete ADDRESS Detail <span class="text-red-500">*</span></label>
                                 <input type="text" name="decree_holder_address" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter complete address">
                             </div>
+                            <div class="md:col-span-2">
+                                <button type="button" id="addMoreDecreeHolder" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                                    <i class="fas fa-plus mr-2"></i>Add More Decree Holder with Address
+                                </button>
+                                <div id="additionalDecreeHolders" class="mt-4 space-y-3"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Customer/Defendant Information -->
+                    <!--Defendant Information -->
                     <div class="mb-6">
                         <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                            <i class="fas fa-users text-blue-500 mr-2"></i>Customer/Defendant Information
+                            <i class="fas fa-users text-blue-500 mr-2"></i>Defendant Information
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">CUSTOMER NAME/DEFENDANT <span class="text-red-500">*</span></label>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">DEFENDANT <span class="text-red-500">*</span></label>
                                 <input type="text" name="customer_name_defendant" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter customer/defendant name">
                             </div>
                             <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">CUSTOMER ADDRESS <span class="text-red-500">*</span></label>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">DEFENDANT ADDRESS <span class="text-red-500">*</span></label>
                                 <input type="text" name="customer_address" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter customer address">
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">CUSTOMER OFFICE ADDRESS</label>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">DEFENDANT OFFICE ADDRESS</label>
                                 <input type="text" name="customer_office_address" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter customer office address">
                             </div>
                             <div class="md:col-span-2">
                                 <button type="button" id="addMoreAddress" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-                                    <i class="fas fa-plus mr-2"></i>Add More Address
+                                    <i class="fas fa-plus mr-2"></i>Add More Defendant With Address
                                 </button>
                                 <div id="additionalAddresses" class="mt-4 space-y-3"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Co-Applicant/Defendant Information -->
-                    <div class="mb-6">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                            <i class="fas fa-user-friends text-blue-500 mr-2"></i>Co-Applicant/Defendant Information
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">CO APPLICANT NAME/DEFENDANT</label>
-                                <input type="text" name="co_applicant_name[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter co-applicant name">
-                            </div>
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">CO APPLICANT ADDRESS</label>
-                                <input type="text" name="co_applicant_address[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter co-applicant address">
-                            </div>
-                            <div class="md:col-span-2">
-                                <button type="button" id="addMoreDefendant" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-                                    <i class="fas fa-plus mr-2"></i>Add More Defendants
-                                </button>
-                                <div id="additionalDefendants" class="mt-4 space-y-3"></div>
                             </div>
                         </div>
                     </div>
@@ -343,7 +346,11 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                             <td class="px-4 py-2">
                                                 <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
-                                            <td class="px-4 py-2"></td>
+                                            <td class="px-4 py-2 text-center">
+                                                <button type="button" class="remove-fee text-red-500 hover:text-red-700">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                         <tr class="border-b border-yellow-300">
                                             <td class="px-4 py-2">
@@ -352,7 +359,11 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                             <td class="px-4 py-2">
                                                 <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
-                                            <td class="px-4 py-2"></td>
+                                            <td class="px-4 py-2 text-center">
+                                                <button type="button" class="remove-fee text-red-500 hover:text-red-700">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                         <tr class="border-b border-yellow-300">
                                             <td class="px-4 py-2">
@@ -361,7 +372,11 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                             <td class="px-4 py-2">
                                                 <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
-                                            <td class="px-4 py-2"></td>
+                                            <td class="px-4 py-2 text-center">
+                                                <button type="button" class="remove-fee text-red-500 hover:text-red-700">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                         <tr class="border-b border-yellow-300">
                                             <td class="px-4 py-2">
@@ -370,7 +385,11 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                             <td class="px-4 py-2">
                                                 <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
-                                            <td class="px-4 py-2"></td>
+                                            <td class="px-4 py-2 text-center">
+                                                <button type="button" class="remove-fee text-red-500 hover:text-red-700">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -418,52 +437,57 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
     <script src="./assets/script.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Add More Address Functionality
-            let addressCount = 0;
-            document.getElementById('addMoreAddress').addEventListener('click', function() {
-                addressCount++;
-                const container = document.getElementById('additionalAddresses');
-                const addressDiv = document.createElement('div');
-                addressDiv.className = 'p-4 border border-gray-200 rounded-lg relative';
-                addressDiv.innerHTML = `
-                    <label class="block text-gray-700 text-sm font-semibold mb-1">Additional Address ${addressCount}</label>
-                    <input type="text" name="additional_customer_address[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter additional address">
-                    <button type="button" class="remove-address absolute top-2 right-2 text-red-500 hover:text-red-700">
+            // Add More Decree Holder Functionality
+            let decreeHolderCount = 0;
+            document.getElementById('addMoreDecreeHolder').addEventListener('click', function() {
+                decreeHolderCount++;
+                const container = document.getElementById('additionalDecreeHolders');
+                const decreeHolderDiv = document.createElement('div');
+                decreeHolderDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-gray-200 rounded-lg relative';
+                decreeHolderDiv.innerHTML = `
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Decree Holder ${decreeHolderCount + 1}</label>
+                        <input type="text" name="additional_decree_holder_name[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter decree holder name">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Decree Holder Address ${decreeHolderCount + 1}</label>
+                        <input type="text" name="additional_decree_holder_address[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter decree holder address">
+                    </div>
+                    <button type="button" class="remove-decree-holder absolute top-2 right-2 text-red-500 hover:text-red-700">
                         <i class="fas fa-times"></i>
                     </button>
                 `;
-                container.appendChild(addressDiv);
+                container.appendChild(decreeHolderDiv);
 
-                addressDiv.querySelector('.remove-address').addEventListener('click', function() {
-                    addressDiv.remove();
+                decreeHolderDiv.querySelector('.remove-decree-holder').addEventListener('click', function() {
+                    decreeHolderDiv.remove();
                 });
             });
 
-            // Add More Defendant Functionality
-            let defendantCount = 1;
-            document.getElementById('addMoreDefendant').addEventListener('click', function() {
-                defendantCount++;
-                const container = document.getElementById('additionalDefendants');
-                const defendantDiv = document.createElement('div');
-                defendantDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-gray-200 rounded-lg relative';
-                defendantDiv.innerHTML = `
+            // Add More Defendant with Address Functionality
+            let defendantAddressCount = 0;
+            document.getElementById('addMoreAddress').addEventListener('click', function() {
+                defendantAddressCount++;
+                const container = document.getElementById('additionalAddresses');
+                const defendantAddressDiv = document.createElement('div');
+                defendantAddressDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-gray-200 rounded-lg relative';
+                defendantAddressDiv.innerHTML = `
                     <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-1">CO APPLICANT NAME/DEFENDANT ${defendantCount}</label>
-                        <input type="text" name="co_applicant_name[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter co-applicant name">
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant ${defendantAddressCount + 1}</label>
+                        <input type="text" name="additional_defendant_name[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter defendant name">
                     </div>
                     <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-1">CO APPLICANT ADDRESS ${defendantCount}</label>
-                        <input type="text" name="co_applicant_address[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter co-applicant address">
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant Address ${defendantAddressCount + 1}</label>
+                        <input type="text" name="additional_defendant_address[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter defendant address">
                     </div>
-                    <button type="button" class="remove-defendant absolute top-2 right-2 text-red-500 hover:text-red-700">
+                    <button type="button" class="remove-defendant-address absolute top-2 right-2 text-red-500 hover:text-red-700">
                         <i class="fas fa-times"></i>
                     </button>
                 `;
-                container.appendChild(defendantDiv);
+                container.appendChild(defendantAddressDiv);
 
-                defendantDiv.querySelector('.remove-defendant').addEventListener('click', function() {
-                    defendantDiv.remove();
-                    defendantCount--;
+                defendantAddressDiv.querySelector('.remove-defendant-address').addEventListener('click', function() {
+                    defendantAddressDiv.remove();
                 });
             });
 
@@ -533,6 +557,13 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                 // Add remove functionality
                 newRow.querySelector('.remove-fee').addEventListener('click', function() {
                     newRow.remove();
+                });
+            });
+
+            // Add remove functionality to existing fee grid rows
+            document.querySelectorAll('.remove-fee').forEach(button => {
+                button.addEventListener('click', function() {
+                    this.closest('tr').remove();
                 });
             });
         });
