@@ -9,13 +9,34 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true)
 
 require_once 'includes/connection.php';
 
-// Sample cases data (will be replaced with database query later)
-$cases = [
-    ['id' => 1, 'loan_number' => '1310746', 'customer_name' => 'SUNIL KUMAR', 'product' => 'PL', 'branch_name' => 'DEHRADUN', 'cheque_no' => '000446', 'cheque_date' => '16.02.2018', 'cheque_amount' => '35784', 'bank_name_address' => 'HDFC, Rajpur rd', 'bounce_date' => '16.02.2018', 'bounce_reason' => 'Fund Insufficient', 'status' => 'Pending', 'father_name' => 'RAM LAL'],
-    ['id' => 2, 'loan_number' => '2444175', 'customer_name' => 'SUNIL KUMAR', 'product' => 'PL', 'branch_name' => 'DEHRADUN', 'cheque_no' => '133465', 'cheque_date' => '16.02.2018', 'cheque_amount' => '36033', 'bank_name_address' => 'Central Bank, Dharasun Branch', 'bounce_date' => '17.02.2018', 'bounce_reason' => 'Fund Insufficient', 'status' => 'Active', 'father_name' => 'Smt Kumar Smit Kulwari Lata'],
-    ['id' => 3, 'loan_number' => '2444179', 'customer_name' => 'SUNIL KUMAR', 'product' => 'PL', 'branch_name' => 'DEHRADUN', 'cheque_no' => '133465', 'cheque_date' => '16.02.2018', 'cheque_amount' => '36033', 'bank_name_address' => 'Central Bank, Dharasun Branch', 'bounce_date' => '17.02.2018', 'bounce_reason' => 'Fund Insufficient', 'status' => 'Pending', 'father_name' => 'Smt Kumar Smit Kulwari Lata'],
-    ['id' => 4, 'loan_number' => '1310747', 'customer_name' => 'PANKAJ CHAVAN', 'product' => 'HL', 'branch_name' => 'MUMBAI', 'cheque_no' => '000448', 'cheque_date' => '20.03.2018', 'cheque_amount' => '45000', 'bank_name_address' => 'ICICI, Andheri', 'bounce_date' => '20.03.2018', 'bounce_reason' => 'Account Closed', 'status' => 'Legal Notice Sent', 'father_name' => 'VIJAY CHAVAN'],
-];
+// Fetch cases from database
+$query = "SELECT 
+    c.id,
+    c.case_type,
+    c.cnr_number,
+    c.loan_number,
+    c.product,
+    c.branch_name,
+    c.status,
+    cl.name as customer_name,
+    cn.cheque_no,
+    cn.cheque_date,
+    cn.cheque_amount,
+    cn.bank_name_address,
+    cn.bounce_date,
+    cn.bounce_reason
+FROM cases c
+LEFT JOIN clients cl ON c.client_id = cl.client_id
+LEFT JOIN case_ni_passa_details cn ON c.id = cn.case_id
+ORDER BY c.created_at DESC";
+
+$result = mysqli_query($conn, $query);
+$cases = [];
+if ($result) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $cases[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -84,26 +105,35 @@ $cases = [
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
+                            <?php if (empty($cases)): ?>
+                            <tr>
+                                <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                                    <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                                    <p>No cases found. <a href="create-case.php" class="text-blue-600 hover:underline">Create your first case</a></p>
+                                </td>
+                            </tr>
+                            <?php else: ?>
                             <?php foreach ($cases as $case): ?>
                             <tr class="hover:bg-gray-50 transition">
-                                <td class="px-6 py-4 text-sm font-medium text-blue-600"><?php echo $case['loan_number']; ?></td>
-                                <td class="px-6 py-4 text-sm font-medium text-gray-900"><?php echo $case['customer_name']; ?></td>
+                                <td class="px-6 py-4 text-sm font-medium text-blue-600"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm font-medium text-gray-900"><?php echo htmlspecialchars($case['customer_name'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm text-gray-600">
                                     <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
-                                        <?php echo $case['product']; ?>
+                                        <?php echo htmlspecialchars($case['product'] ?? '-'); ?>
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo $case['branch_name']; ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo $case['cheque_no']; ?></td>
-                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">₹<?php echo number_format($case['cheque_amount']); ?></td>
-                                <td class="px-6 py-4 text-sm text-red-600"><?php echo $case['bounce_reason']; ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['branch_name'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['cheque_no'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">₹<?php echo $case['cheque_amount'] ? number_format($case['cheque_amount']) : '-'; ?></td>
+                                <td class="px-6 py-4 text-sm text-red-600"><?php echo htmlspecialchars($case['bounce_reason'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm">
                                     <span class="px-3 py-1 <?php 
-                                        echo $case['status'] == 'Active' ? 'bg-green-100 text-green-800' : 
-                                             ($case['status'] == 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                             ($case['status'] == 'Closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
+                                        $status = strtolower($case['status'] ?? 'pending');
+                                        echo $status == 'active' ? 'bg-green-100 text-green-800' : 
+                                             ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                             ($status == 'closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
                                     ?> rounded-full text-xs font-semibold">
-                                        <?php echo $case['status']; ?>
+                                        <?php echo htmlspecialchars(ucfirst($case['status'] ?? 'Pending')); ?>
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
@@ -121,48 +151,56 @@ $cases = [
                                 </td>
                             </tr>
                             <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Mobile Card View -->
                 <div class="md:hidden divide-y divide-gray-200">
+                    <?php if (empty($cases)): ?>
+                    <div class="p-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                        <p>No cases found. <a href="create-case.php" class="text-blue-600 hover:underline">Create your first case</a></p>
+                    </div>
+                    <?php else: ?>
                     <?php foreach ($cases as $case): ?>
                     <div class="p-4 hover:bg-gray-50 transition">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
-                                        <?php echo $case['product']; ?>
+                                        <?php echo htmlspecialchars($case['product'] ?? '-'); ?>
                                     </span>
                                     <span class="inline-block px-2 py-1 <?php 
-                                        echo $case['status'] == 'Active' ? 'bg-green-100 text-green-800' : 
-                                             ($case['status'] == 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                             ($case['status'] == 'Closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
+                                        $status = strtolower($case['status'] ?? 'pending');
+                                        echo $status == 'active' ? 'bg-green-100 text-green-800' : 
+                                             ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                             ($status == 'closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
                                     ?> rounded-full text-xs font-semibold">
-                                        <?php echo $case['status']; ?>
+                                        <?php echo htmlspecialchars(ucfirst($case['status'] ?? 'Pending')); ?>
                                     </span>
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-900"><?php echo $case['customer_name']; ?></h3>
-                                <p class="text-sm text-blue-600 font-semibold">Loan #<?php echo $case['loan_number']; ?></p>
+                                <h3 class="text-lg font-bold text-gray-900"><?php echo htmlspecialchars($case['customer_name'] ?? '-'); ?></h3>
+                                <p class="text-sm text-blue-600 font-semibold">Loan #<?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></p>
                             </div>
                         </div>
                         <div class="space-y-2 mb-4">
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-building w-5 text-blue-500"></i>
-                                <span class="ml-2"><strong>Branch:</strong> <?php echo $case['branch_name']; ?></span>
+                                <span class="ml-2"><strong>Branch:</strong> <?php echo htmlspecialchars($case['branch_name'] ?? '-'); ?></span>
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-receipt w-5 text-blue-500"></i>
-                                <span class="ml-2"><strong>Cheque:</strong> <?php echo $case['cheque_no']; ?> - ₹<?php echo number_format($case['cheque_amount']); ?></span>
+                                <span class="ml-2"><strong>Cheque:</strong> <?php echo htmlspecialchars($case['cheque_no'] ?? '-'); ?> - ₹<?php echo $case['cheque_amount'] ? number_format($case['cheque_amount']) : '-'; ?></span>
                             </div>
                             <div class="flex items-start text-sm text-gray-600">
                                 <i class="fas fa-exclamation-triangle w-5 text-red-500 mt-1"></i>
-                                <span class="ml-2"><strong>Bounce Reason:</strong> <?php echo $case['bounce_reason']; ?></span>
+                                <span class="ml-2"><strong>Bounce Reason:</strong> <?php echo htmlspecialchars($case['bounce_reason'] ?? '-'); ?></span>
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-calendar w-5 text-blue-500"></i>
-                                <span class="ml-2"><strong>Bounce Date:</strong> <?php echo $case['bounce_date']; ?></span>
+                                <span class="ml-2"><strong>Bounce Date:</strong> <?php echo htmlspecialchars($case['bounce_date'] ?? '-'); ?></span>
                             </div>
                         </div>
                         <div class="flex items-center justify-end space-x-4 pt-3 border-t border-gray-200">
@@ -178,6 +216,7 @@ $cases = [
                         </div>
                     </div>
                     <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 

@@ -10,59 +10,100 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true)
 require_once 'includes/connection.php';
 
 // Get case ID from URL
-$case_id = isset($_GET['id']) ? intval($_GET['id']) : 1;
+$case_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// Sample case data (will be replaced with database query later)
-$cases = [
-    1 => [
-        'id' => 1,
-        'loan_number' => '1310746',
-        'customer_name' => 'SUNIL KUMAR',
-        'product' => 'PL',
-        'branch_name' => 'DEHRADUN',
-        'cheque_no' => '000446',
-        'cheque_date' => '16.02.2018',
-        'cheque_amount' => '35784',
-        'bank_name_address' => 'HDFC, Rajpur rd',
-        'bounce_date' => '16.02.2018',
-        'bounce_reason' => 'Fund Insufficient',
-        'status' => 'Pending',
-        'father_name' => 'RAM LAL',
-        'cheque_holder_name' => 'RAM LAL',
-        'off_address' => 'SABJI MANDI, COLONY, KEDARPURAM, DEHRADUN-248002',
-        'resi_address' => 'OLD DALANWALI, DEHRADUN-248002',
-        'created_at' => '2025-12-19'
-    ],
-    2 => [
-        'id' => 2,
-        'loan_number' => '2444175',
-        'customer_name' => 'SUNIL KUMAR',
-        'product' => 'PL',
-        'branch_name' => 'DEHRADUN',
-        'cheque_no' => '133465',
-        'cheque_date' => '16.02.2018',
-        'cheque_amount' => '36033',
-        'bank_name_address' => 'Central Bank, Dharasun Branch',
-        'bounce_date' => '17.02.2018',
-        'bounce_reason' => 'Fund Insufficient',
-        'status' => 'Active',
-        'father_name' => 'Smt Kumar Smit Kulwari Lata',
-        'cheque_holder_name' => 'Smt Kumar Smit Kulwari Lata',
-        'off_address' => 'SABJI MANDI, COLONY, KEDARPURAM, DEHRADUN-248002',
-        'resi_address' => '131165 OLD DALANWALI, DEHRADUN-248002',
-        'created_at' => '2025-12-19'
-    ]
-];
+if (!$case_id) {
+    header("Location: view-cases.php");
+    exit();
+}
 
-$case = isset($cases[$case_id]) ? $cases[$case_id] : $cases[1];
+// Fetch main case data with client info
+$query = "SELECT c.*, cl.name as customer_name, cl.father_name, cl.email, cl.mobile, cl.address
+          FROM cases c
+          LEFT JOIN clients cl ON c.client_id = cl.client_id
+          WHERE c.id = ?";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $case_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$case = mysqli_fetch_assoc($result);
 
-// Sample stages data (will be replaced with database query later)
-$stages = [
-    ['id' => 1, 'stage_name' => 'Case Registered', 'stage_date' => '2025-12-19', 'description' => 'Case registered in the system', 'status' => 'Completed'],
-    ['id' => 2, 'stage_name' => 'Legal Notice Sent', 'stage_date' => '2025-12-20', 'description' => 'Legal notice sent to the customer via registered post', 'status' => 'Completed'],
-    ['id' => 3, 'stage_name' => 'Reply Awaited', 'stage_date' => '2026-01-05', 'description' => 'Waiting for customer response to legal notice', 'status' => 'In Progress'],
-    ['id' => 4, 'stage_name' => 'Court Filing', 'stage_date' => '2026-01-15', 'description' => 'Case to be filed in court', 'status' => 'Pending']
-];
+if (!$case) {
+    header("Location: view-cases.php");
+    exit();
+}
+
+// Fetch case-specific details based on case type
+$case_details = null;
+$parties = [];
+$fee_grid = [];
+
+switch ($case['case_type']) {
+    case 'ni_passa':
+        $query = "SELECT * FROM case_ni_passa_details WHERE case_id = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "i", $case_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $case_details = mysqli_fetch_assoc($result);
+        break;
+        
+    case 'criminal':
+        $query = "SELECT * FROM case_criminal_details WHERE case_id = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "i", $case_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $case_details = mysqli_fetch_assoc($result);
+        break;
+        
+    case 'consumer_civil':
+        $query = "SELECT * FROM case_consumer_civil_details WHERE case_id = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "i", $case_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $case_details = mysqli_fetch_assoc($result);
+        break;
+        
+    case 'ep_arbitration':
+        $query = "SELECT * FROM case_ep_arbitration_details WHERE case_id = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "i", $case_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $case_details = mysqli_fetch_assoc($result);
+        break;
+        
+    case 'arbitration_other':
+        $query = "SELECT * FROM case_arbitration_other_details WHERE case_id = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "i", $case_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $case_details = mysqli_fetch_assoc($result);
+        break;
+}
+
+// Fetch case parties
+$query = "SELECT * FROM case_parties WHERE case_id = ? ORDER BY is_primary DESC";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $case_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+while ($row = mysqli_fetch_assoc($result)) {
+    $parties[] = $row;
+}
+
+// Fetch fee grid
+$query = "SELECT * FROM case_fee_grid WHERE case_id = ?";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $case_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+while ($row = mysqli_fetch_assoc($result)) {
+    $fee_grid[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -99,11 +140,12 @@ $stages = [
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="px-4 py-2 <?php 
-                            echo $case['status'] == 'Active' ? 'bg-green-100 text-green-800' : 
-                                 ($case['status'] == 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                 ($case['status'] == 'Closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
+                            $status = strtolower($case['status'] ?? 'pending');
+                            echo $status == 'active' ? 'bg-green-100 text-green-800' : 
+                                 ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                 ($status == 'closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
                         ?> rounded-lg text-sm font-bold">
-                            <i class="fas fa-flag mr-2"></i><?php echo $case['status']; ?>
+                            <i class="fas fa-flag mr-2"></i><?php echo htmlspecialchars(ucfirst($case['status'])); ?>
                         </span>
                         <a href="edit-case.php?id=<?php echo $case['id']; ?>" 
                             class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition">
@@ -129,7 +171,7 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Loan Number</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo $case['loan_number']; ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></p>
                         </div>
                     </div>
 
@@ -140,7 +182,7 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Customer Name</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['customer_name']); ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['customer_name'] ?? '-'); ?></p>
                         </div>
                     </div>
 
@@ -151,7 +193,7 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Father's Name</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['father_name']); ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['father_name'] ?? '-'); ?></p>
                         </div>
                     </div>
 
@@ -164,7 +206,7 @@ $stages = [
                             <p class="text-sm text-gray-500 mb-1">Product</p>
                             <p class="text-lg font-bold text-gray-800">
                                 <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                                    <?php echo $case['product']; ?>
+                                    <?php echo htmlspecialchars($case['product'] ?? '-'); ?>
                                 </span>
                             </p>
                         </div>
@@ -177,9 +219,48 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Branch Name</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['branch_name']); ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['branch_name'] ?? '-'); ?></p>
                         </div>
                     </div>
+
+                    <!-- CNR Number -->
+                    <?php if (!empty($case['cnr_number'])): ?>
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-file-invoice text-teal-600 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">CNR Number</p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['cnr_number']); ?></p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Location -->
+                    <?php if (!empty($case['location'])): ?>
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-map-marker-alt text-orange-600 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">Location</p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['location']); ?></p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Region -->
+                    <?php if (!empty($case['region'])): ?>
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-globe text-cyan-600 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">Region</p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['region']); ?></p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Created Date -->
                     <div class="flex items-start">
@@ -194,7 +275,8 @@ $stages = [
                 </div>
             </div>
 
-            <!-- Cheque Information -->
+            <!-- Cheque Information (Only for NI/PASSA cases) -->
+            <?php if ($case['case_type'] == 'ni_passa' && $case_details): ?>
             <div class="bg-white rounded-xl shadow-md p-6 sm:p-8 mb-6">
                 <div class="mb-6 pb-4 border-b border-gray-200">
                     <h2 class="text-2xl font-bold text-gray-800">
@@ -210,7 +292,7 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Cheque Number</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo $case['cheque_no']; ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['cheque_no'] ?? '-'); ?></p>
                         </div>
                     </div>
 
@@ -221,7 +303,7 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Cheque Date</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo $case['cheque_date']; ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo $case_details['cheque_date'] ? date('d M Y', strtotime($case_details['cheque_date'])) : '-'; ?></p>
                         </div>
                     </div>
 
@@ -232,7 +314,7 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Cheque Amount</p>
-                            <p class="text-lg font-bold text-green-600">₹<?php echo number_format($case['cheque_amount']); ?></p>
+                            <p class="text-lg font-bold text-green-600">₹<?php echo $case_details['cheque_amount'] ? number_format($case_details['cheque_amount']) : '-'; ?></p>
                         </div>
                     </div>
 
@@ -243,7 +325,7 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Cheque Holder Name</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['cheque_holder_name']); ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['cheque_holder_name'] ?? '-'); ?></p>
                         </div>
                     </div>
 
@@ -254,21 +336,10 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Bank Name & Address</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['bank_name_address']); ?></p>
+                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['bank_name_address'] ?? '-'); ?></p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Bounce Information -->
-            <div class="bg-white rounded-xl shadow-md p-6 sm:p-8 mb-6">
-                <div class="mb-6 pb-4 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800">
-                        <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>Bounce Information
-                    </h2>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
                     <!-- Bounce Date -->
                     <div class="flex items-start">
                         <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
@@ -276,127 +347,828 @@ $stages = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Bounce Date</p>
-                            <p class="text-lg font-bold text-red-600"><?php echo $case['bounce_date']; ?></p>
+                            <p class="text-lg font-bold text-red-600"><?php echo $case_details['bounce_date'] ? date('d M Y', strtotime($case_details['bounce_date'])) : '-'; ?></p>
                         </div>
                     </div>
 
                     <!-- Bounce Reason -->
-                    <div class="flex items-start">
+                    <div class="flex items-start md:col-span-2">
                         <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                             <i class="fas fa-comment-slash text-red-600 text-lg"></i>
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Bounce Reason</p>
-                            <p class="text-lg font-bold text-red-600"><?php echo htmlspecialchars($case['bounce_reason']); ?></p>
+                            <p class="text-lg font-bold text-red-600"><?php echo htmlspecialchars($case_details['bounce_reason'] ?? '-'); ?></p>
                         </div>
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
-            <!-- Case Stages -->
+            <!-- Case-Specific Details -->
+            <?php if ($case_details): ?>
             <div class="bg-white rounded-xl shadow-md p-6 sm:p-8 mb-6">
-                <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                <div class="mb-6 pb-4 border-b border-gray-200">
                     <h2 class="text-2xl font-bold text-gray-800">
-                        <i class="fas fa-tasks text-blue-500 mr-2"></i>Case Stages
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>Case Specific Details
                     </h2>
-                    <button onclick="document.getElementById('addStageModal').classList.remove('hidden')" 
-                        class="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg">
-                        <i class="fas fa-plus mr-2"></i>Add Stage
-                    </button>
                 </div>
 
-                <?php if (count($stages) > 0): ?>
-                    <!-- Stages Timeline -->
-                    <div class="relative">
-                        <!-- Vertical Line -->
-                        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-300 hidden sm:block"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <?php if ($case['case_type'] == 'ni_passa'): ?>
+                        <!-- NI/PASSA Specific Fields -->
+                        <?php if (!empty($case_details['accused_authorised_person'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-user text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Accused Authorised Person</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['accused_authorised_person']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                         
-                        <div class="space-y-6">
-                            <?php foreach ($stages as $index => $stage): ?>
-                                <div class="relative flex items-start gap-4">
-                                    <!-- Timeline Dot -->
-                                    <div class="hidden sm:flex w-12 h-12 rounded-full <?php 
-                                        echo $stage['status'] == 'Completed' ? 'bg-green-500' : 
-                                             ($stage['status'] == 'In Progress' ? 'bg-blue-500' : 'bg-gray-300'); 
-                                    ?> flex-shrink-0 items-center justify-center z-10">
-                                        <i class="fas <?php 
-                                            echo $stage['status'] == 'Completed' ? 'fa-check' : 
-                                                 ($stage['status'] == 'In Progress' ? 'fa-spinner' : 'fa-clock'); 
-                                        ?> text-white text-lg"></i>
-                                    </div>
-                                    
-                                    <!-- Stage Content -->
-                                    <div class="flex-1 bg-gray-50 rounded-lg p-4 hover:shadow-md transition">
-                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                                            <h3 class="text-lg font-bold text-gray-800"><?php echo $stage['stage_name']; ?></h3>
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-sm text-gray-600">
-                                                    <i class="fas fa-calendar mr-1"></i><?php echo date('d M Y', strtotime($stage['stage_date'])); ?>
-                                                </span>
-                                                <span class="px-3 py-1 <?php 
-                                                    echo $stage['status'] == 'Completed' ? 'bg-green-100 text-green-800' : 
-                                                         ($stage['status'] == 'In Progress' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-700'); 
-                                                ?> rounded-full text-xs font-semibold">
-                                                    <?php echo $stage['status']; ?>
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <p class="text-gray-600 text-sm"><?php echo $stage['description']; ?></p>
-                                        <div class="flex items-center gap-2 mt-3">
-                                            <button class="text-blue-600 hover:text-blue-800 text-sm" title="Edit Stage">
-                                                <i class="fas fa-edit mr-1"></i>Edit
-                                            </button>
-                                            <button class="text-red-600 hover:text-red-800 text-sm" title="Delete Stage">
-                                                <i class="fas fa-trash mr-1"></i>Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
+                        <?php if (!empty($case_details['total_no_of_chq'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-list-ol text-indigo-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Total No. of Cheques</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['total_no_of_chq']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['filing_amount'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-rupee-sign text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Amount</p>
+                                <p class="text-lg font-bold text-green-600">₹<?php echo number_format($case_details['filing_amount']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['cheque_status'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-info-circle text-yellow-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Cheque Status</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['cheque_status']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['notice_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Notice Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['notice_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['notice_sent_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar-check text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Notice Sent Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['notice_sent_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['filing_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-file-alt text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['filing_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['filing_location'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-map-marker-alt text-teal-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Location</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['filing_location']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['case_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-hashtag text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Case Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['case_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['court_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-building text-indigo-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Court Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['court_name'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-gavel text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Court Name</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_name']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['section'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-book text-orange-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Section</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['section']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['act'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-gavel text-red-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Act</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['act']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['poa_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-pink-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">POA Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['poa_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['last_date_update'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-clock text-gray-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Last Date Update</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['last_date_update'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['current_stage'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-tasks text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Current Stage</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['current_stage']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case['complainant_authorised_person'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-violet-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-user-tie text-violet-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Complainant Authorised Person</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['complainant_authorised_person']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                    <?php elseif ($case['case_type'] == 'criminal'): ?>
+                        <!-- Criminal Case Specific Fields -->
+                        <?php if (!empty($case_details['case_type_specific'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-folder text-indigo-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Case Type</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['case_type_specific']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['section'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-book text-orange-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Section</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['section']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['act'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-gavel text-red-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Act</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['act']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['fir_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-file-alt text-red-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">FIR Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['fir_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['crime_no_fir_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-hashtag text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">FIR Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['crime_no_fir_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['police_station_with_district'])): ?>
+                        <div class="flex items-start md:col-span-2">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-building text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Police Station with District</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['police_station_with_district']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['charge_sheet_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Charge Sheet Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['charge_sheet_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['notice_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Notice Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['notice_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['poa_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-pink-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">POA Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['poa_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['filing_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-file-alt text-teal-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['filing_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['filing_location'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-map-marker-alt text-yellow-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Location</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['filing_location']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['case_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-hashtag text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Case Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['case_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['court_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-building text-indigo-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Court Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['court_name'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-gavel text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Court Name</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_name']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                    <?php elseif ($case['case_type'] == 'consumer_civil'): ?>
+                        <!-- Consumer/Civil Case Fields -->
+                        <?php if (!empty($case_details['case_type_specific'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-folder text-indigo-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Case Type</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['case_type_specific']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['case_filling_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['case_filling_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['legal_notice_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Legal Notice Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['legal_notice_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['case_vs_law_act'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-gavel text-orange-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Case vs Law/Act</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['case_vs_law_act']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['swt_value'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-rupee-sign text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">SWT Value</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['swt_value']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['filing_location'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-map-marker-alt text-yellow-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Location</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['filing_location']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['court_name'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-gavel text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Court Name</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_name']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['case_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-hashtag text-indigo-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Case Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['case_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['court_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-building text-teal-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Court Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['advocate'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-user-tie text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Advocate</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['advocate']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['poa'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-file-signature text-pink-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">POA</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['poa']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                    <?php elseif ($case['case_type'] == 'ep_arbitration'): ?>
+                        <!-- EP/Arbitration Case Fields -->
+                        <?php if (!empty($case_details['date_of_filing'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Date of Filing</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['date_of_filing'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['filing_location'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-map-marker-alt text-yellow-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Filing Location</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['filing_location']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['case_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-hashtag text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Case Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['case_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['court_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-building text-indigo-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Court Number</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['advocate'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-user-tie text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Advocate</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['advocate']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['poa'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-file-signature text-pink-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">POA</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['poa']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['award_date'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-calendar-check text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Award Date</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo date('d M Y', strtotime($case_details['award_date'])); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['award_amount'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-rupee-sign text-green-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Award Amount</p>
+                                <p class="text-lg font-bold text-green-600">₹<?php echo number_format($case_details['award_amount']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['arbitrator_name'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-user-tie text-purple-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Arbitrator</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['arbitrator_name']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['arbitration_case_no'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-hashtag text-blue-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Arbitration Case No.</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['arbitration_case_no']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['claim_amount'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-rupee-sign text-orange-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Claim Amount</p>
+                                <p class="text-lg font-bold text-orange-600">₹<?php echo number_format($case_details['claim_amount']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['recovery_amount'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-rupee-sign text-teal-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Recovery Amount</p>
+                                <p class="text-lg font-bold text-teal-600">₹<?php echo number_format($case_details['recovery_amount']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($case_details['rate_of_interest'])): ?>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <i class="fas fa-percent text-yellow-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Rate of Interest</p>
+                                <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['rate_of_interest']); ?>%</p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($case_details['remarks'])): ?>
+                    <div class="flex items-start md:col-span-3">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-comment text-gray-600 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">Remarks</p>
+                            <p class="text-base text-gray-700"><?php echo nl2br(htmlspecialchars($case_details['remarks'])); ?></p>
                         </div>
                     </div>
-                <?php else: ?>
-                    <div class="text-center py-12">
-                        <i class="fas fa-tasks text-gray-300 text-6xl mb-4"></i>
-                        <p class="text-gray-500 text-lg mb-4">No stages added yet</p>
-                        <button onclick="document.getElementById('addStageModal').classList.remove('hidden')" 
-                            class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
-                            <i class="fas fa-plus mr-2"></i>Add First Stage
-                        </button>
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
+            <?php endif; ?>
 
-            <!-- Address Information -->
+            <!-- Case Parties -->
+            <?php if (!empty($parties)): ?>
+            <div class="bg-white rounded-xl shadow-md p-6 sm:p-8 mb-6">
+                <div class="mb-6 pb-4 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-users text-blue-500 mr-2"></i>Case Parties
+                    </h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <?php foreach ($parties as $party): ?>
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center mb-2">
+                            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold uppercase">
+                                <?php echo htmlspecialchars($party['party_type']); ?>
+                            </span>
+                            <?php if ($party['is_primary']): ?>
+                            <span class="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Primary</span>
+                            <?php endif; ?>
+                        </div>
+                        <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($party['name']); ?></p>
+                        <?php if (!empty($party['address'])): ?>
+                        <p class="text-sm text-gray-600 mt-1"><?php echo nl2br(htmlspecialchars($party['address'])); ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Fee Grid -->
+            <?php if (!empty($fee_grid)): ?>
+            <div class="bg-white rounded-xl shadow-md p-6 sm:p-8 mb-6">
+                <div class="mb-6 pb-4 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-receipt text-blue-500 mr-2"></i>Fee Grid
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fee Name</th>
+                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <?php 
+                            $total = 0;
+                            foreach ($fee_grid as $fee): 
+                                $total += $fee['fee_amount'];
+                            ?>
+                            <tr>
+                                <td class="px-4 py-3 text-sm text-gray-800"><?php echo htmlspecialchars($fee['fee_name']); ?></td>
+                                <td class="px-4 py-3 text-sm text-gray-800 text-right">₹<?php echo number_format($fee['fee_amount'], 2); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                            <tr class="bg-gray-50 font-bold">
+                                <td class="px-4 py-3 text-sm text-gray-900">Total</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 text-right">₹<?php echo number_format($total, 2); ?></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Contact Information -->
             <div class="bg-white rounded-xl shadow-md p-6 sm:p-8">
                 <div class="mb-6 pb-4 border-b border-gray-200">
                     <h2 class="text-2xl font-bold text-gray-800">
-                        <i class="fas fa-map-marker-alt text-blue-500 mr-2"></i>Address Information
+                        <i class="fas fa-map-marker-alt text-blue-500 mr-2"></i>Contact Information
                     </h2>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Office Address -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <?php if (!empty($case['email'])): ?>
                     <div class="flex items-start">
                         <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                            <i class="fas fa-briefcase text-blue-600 text-lg"></i>
+                            <i class="fas fa-envelope text-blue-600 text-lg"></i>
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-500 mb-1">Office Address</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['off_address']); ?></p>
+                            <p class="text-sm text-gray-500 mb-1">Email</p>
+                            <p class="text-base font-semibold text-gray-800"><?php echo htmlspecialchars($case['email']); ?></p>
                         </div>
                     </div>
-
-                    <!-- Residential Address -->
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($case['mobile'])): ?>
                     <div class="flex items-start">
                         <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                            <i class="fas fa-home text-green-600 text-lg"></i>
+                            <i class="fas fa-phone text-green-600 text-lg"></i>
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-500 mb-1">Residential Address</p>
-                            <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case['resi_address']); ?></p>
+                            <p class="text-sm text-gray-500 mb-1">Mobile</p>
+                            <p class="text-base font-semibold text-gray-800"><?php echo htmlspecialchars($case['mobile']); ?></p>
                         </div>
                     </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($case['address'])): ?>
+                    <div class="flex items-start md:col-span-2 lg:col-span-1">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-map-marker-alt text-purple-600 text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-500 mb-1">Address</p>
+                            <p class="text-base text-gray-700"><?php echo nl2br(htmlspecialchars($case['address'])); ?></p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

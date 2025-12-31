@@ -137,7 +137,8 @@ function insertParties($conn, $case_id, $case_type, $data) {
                         foreach ($names as $index => $name) {
                             if (!empty($name)) {
                                 $address = $addresses[$index] ?? null;
-                                mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $name, $address, 0);
+                                $is_primary_flag = 0;
+                                mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $name, $address, $is_primary_flag);
                                 mysqli_stmt_execute($stmt);
                             }
                         }
@@ -347,7 +348,8 @@ function insertEpArbitrationDetails($conn, $case_id, $data) {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     
-    mysqli_stmt_bind_param($stmt, "isssssssssssssidddddsssssssss",
+    // Bind parameters: 30 total (i + 13s + i + 6d + 9s)
+    mysqli_stmt_bind_param($stmt, "issssssssssssiddddddsssssssss",
         $case_id, $filing_location, $case_no, $court_no, $advocate, $poa, $date_of_filing,
         $customer_office_address, $award_date, $arbitrator_name, $arbitrator_address,
         $arbitration_case_no, $interest_start_date, $interest_end_date, $total_days,
