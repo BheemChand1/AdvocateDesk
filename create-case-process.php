@@ -27,12 +27,18 @@ if (!$client_id || !$case_type) {
 mysqli_begin_transaction($conn);
 
 try {
+    // Generate unique_case_id
+    $countResult = mysqli_query($conn, "SELECT COUNT(*) as count FROM cases");
+    $countRow = mysqli_fetch_assoc($countResult);
+    $nextNumber = $countRow['count'] + 1;
+    $unique_case_id = "case" . $nextNumber;
+    
     // Insert into main cases table
     $stmt = mysqli_prepare($conn, "
         INSERT INTO cases (
-            client_id, case_type, cnr_number, loan_number, product, 
+            unique_case_id, client_id, case_type, cnr_number, loan_number, product, 
             branch_name, location, region, complainant_authorised_person, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     
     $cnr_number = $_POST['cnr_number'] ?? null;
@@ -44,8 +50,8 @@ try {
     $complainant_authorised_person = $_POST['complainant_authorised_person'] ?? null;
     $created_by = $_SESSION['user_id'];
     
-    mysqli_stmt_bind_param($stmt, "issssssssi", 
-        $client_id, $case_type, $cnr_number, $loan_number, $product,
+    mysqli_stmt_bind_param($stmt, "sissssssssi", 
+        $unique_case_id, $client_id, $case_type, $cnr_number, $loan_number, $product,
         $branch_name, $location, $region, $complainant_authorised_person, $created_by
     );
     
@@ -349,7 +355,7 @@ function insertEpArbitrationDetails($conn, $case_id, $data) {
     ");
     
     // Bind parameters: 30 total (i + 13s + i + 6d + 9s)
-    mysqli_stmt_bind_param($stmt, "issssssssssssiddddddsssssssss",
+    mysqli_stmt_bind_param($stmt, "isssssssssssssiddddddsssssssss",
         $case_id, $filing_location, $case_no, $court_no, $advocate, $poa, $date_of_filing,
         $customer_office_address, $award_date, $arbitrator_name, $arbitrator_address,
         $arbitration_case_no, $interest_start_date, $interest_end_date, $total_days,

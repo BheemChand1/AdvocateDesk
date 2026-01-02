@@ -18,4 +18,3 @@ mysqli_set_charset($conn, "utf8");
 
 // Optional: Uncomment below to see success message
 // echo "Database connected successfully!";
-?>

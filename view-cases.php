@@ -9,28 +9,40 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true)
 
 require_once 'includes/connection.php';
 
-// Fetch cases from database
+// Get search query
+$search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+// Fetch cases from database with search
 $query = "SELECT 
     c.id,
+    c.unique_case_id,
     c.case_type,
-    c.cnr_number,
     c.loan_number,
-    c.product,
-    c.branch_name,
     c.status,
     cl.name as customer_name,
-    cn.cheque_no,
-    cn.cheque_date,
-    cn.cheque_amount,
-    cn.bank_name_address,
-    cn.bounce_date,
-    cn.bounce_reason
+    cl.mobile,
+    cl.email
 FROM cases c
-LEFT JOIN clients cl ON c.client_id = cl.client_id
-LEFT JOIN case_ni_passa_details cn ON c.id = cn.case_id
-ORDER BY c.created_at DESC";
+LEFT JOIN clients cl ON c.client_id = cl.client_id";
 
-$result = mysqli_query($conn, $query);
+if (!empty($search_query)) {
+    $search_term = '%' . $search_query . '%';
+    $query .= " WHERE c.loan_number LIKE ? 
+               OR c.unique_case_id LIKE ? 
+               OR cl.name LIKE ?";
+}
+
+$query .= " ORDER BY c.created_at DESC";
+
+if (!empty($search_query)) {
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_bind_param($stmt, "sss", $search_term, $search_term, $search_term);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+} else {
+    $result = mysqli_query($conn, $query);
+}
+
 $cases = [];
 if ($result) {
     while ($row = mysqli_fetch_assoc($result)) {
@@ -71,13 +83,24 @@ if ($result) {
             <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6">
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <!-- Search Bar -->
-                    <div class="w-full sm:w-96">
-                        <div class="relative">
-                            <input type="text" placeholder="Search by loan number, customer name, or cheque no..."
-                                class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <form method="GET" class="w-full sm:flex-1 sm:max-w-96">
+                        <div class="flex gap-2">
+                            <div class="flex-1 relative">
+                                <input type="text" name="search" placeholder="Search by loan number, case ID, or customer name..."
+                                    value="<?php echo htmlspecialchars($search_query); ?>"
+                                    class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                            <button type="submit" class="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                                <i class="fas fa-search mr-2"></i>Search
+                            </button>
+                            <?php if (!empty($search_query)): ?>
+                                <a href="view-cases.php" class="px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                                    <i class="fas fa-times mr-2"></i>Clear
+                                </a>
+                            <?php endif; ?>
                         </div>
-                    </div>
+                    </form>
                     <!-- Add Case Button -->
                     <a href="create-case.php"
                         class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg text-center">
@@ -93,13 +116,12 @@ if ($result) {
                     <table class="w-full">
                         <thead class="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
                             <tr>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Loan No.</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Case ID</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Customer Name</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Product</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Branch</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Cheque No.</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Cheque Amount</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Bounce Reason</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Mobile</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Email</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Loan No.</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Case Type</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Status</th>
                                 <th class="px-6 py-4 text-center text-sm font-semibold">Actions</th>
                             </tr>
@@ -107,7 +129,7 @@ if ($result) {
                         <tbody class="divide-y divide-gray-200">
                             <?php if (empty($cases)): ?>
                             <tr>
-                                <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                                     <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
                                     <p>No cases found. <a href="create-case.php" class="text-blue-600 hover:underline">Create your first case</a></p>
                                 </td>
@@ -115,17 +137,16 @@ if ($result) {
                             <?php else: ?>
                             <?php foreach ($cases as $case): ?>
                             <tr class="hover:bg-gray-50 transition">
-                                <td class="px-6 py-4 text-sm font-medium text-blue-600"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm font-bold text-purple-600"><?php echo htmlspecialchars($case['unique_case_id'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900"><?php echo htmlspecialchars($case['customer_name'] ?? '-'); ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-600">
+                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['mobile'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['email'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm font-medium text-blue-600"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm">
                                     <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
-                                        <?php echo htmlspecialchars($case['product'] ?? '-'); ?>
+                                        <?php echo htmlspecialchars($case['case_type'] ?? '-'); ?>
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['branch_name'] ?? '-'); ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['cheque_no'] ?? '-'); ?></td>
-                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">₹<?php echo $case['cheque_amount'] ? number_format($case['cheque_amount']) : '-'; ?></td>
-                                <td class="px-6 py-4 text-sm text-red-600"><?php echo htmlspecialchars($case['bounce_reason'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm">
                                     <span class="px-3 py-1 <?php 
                                         $status = strtolower($case['status'] ?? 'pending');
@@ -169,8 +190,11 @@ if ($result) {
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-2">
+                                    <span class="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
+                                        <?php echo htmlspecialchars($case['unique_case_id'] ?? '-'); ?>
+                                    </span>
                                     <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
-                                        <?php echo htmlspecialchars($case['product'] ?? '-'); ?>
+                                        <?php echo htmlspecialchars($case['case_type'] ?? '-'); ?>
                                     </span>
                                     <span class="inline-block px-2 py-1 <?php 
                                         $status = strtolower($case['status'] ?? 'pending');
@@ -187,20 +211,12 @@ if ($result) {
                         </div>
                         <div class="space-y-2 mb-4">
                             <div class="flex items-center text-sm text-gray-600">
-                                <i class="fas fa-building w-5 text-blue-500"></i>
-                                <span class="ml-2"><strong>Branch:</strong> <?php echo htmlspecialchars($case['branch_name'] ?? '-'); ?></span>
+                                <i class="fas fa-phone w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>Mobile:</strong> <?php echo htmlspecialchars($case['mobile'] ?? '-'); ?></span>
                             </div>
                             <div class="flex items-center text-sm text-gray-600">
-                                <i class="fas fa-receipt w-5 text-blue-500"></i>
-                                <span class="ml-2"><strong>Cheque:</strong> <?php echo htmlspecialchars($case['cheque_no'] ?? '-'); ?> - ₹<?php echo $case['cheque_amount'] ? number_format($case['cheque_amount']) : '-'; ?></span>
-                            </div>
-                            <div class="flex items-start text-sm text-gray-600">
-                                <i class="fas fa-exclamation-triangle w-5 text-red-500 mt-1"></i>
-                                <span class="ml-2"><strong>Bounce Reason:</strong> <?php echo htmlspecialchars($case['bounce_reason'] ?? '-'); ?></span>
-                            </div>
-                            <div class="flex items-center text-sm text-gray-600">
-                                <i class="fas fa-calendar w-5 text-blue-500"></i>
-                                <span class="ml-2"><strong>Bounce Date:</strong> <?php echo htmlspecialchars($case['bounce_date'] ?? '-'); ?></span>
+                                <i class="fas fa-envelope w-5 text-blue-500"></i>
+                                <span class="ml-2"><strong>Email:</strong> <?php echo htmlspecialchars($case['email'] ?? '-'); ?></span>
                             </div>
                         </div>
                         <div class="flex items-center justify-end space-x-4 pt-3 border-t border-gray-200">

@@ -4,6 +4,7 @@
 -- Main cases table with common fields
 CREATE TABLE IF NOT EXISTS cases (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    unique_case_id VARCHAR(50) UNIQUE,
     client_id INT NOT NULL,
     case_type VARCHAR(50) NOT NULL,
     cnr_number VARCHAR(100),
@@ -19,7 +20,8 @@ CREATE TABLE IF NOT EXISTS cases (
     created_by INT,
     INDEX idx_client_id (client_id),
     INDEX idx_case_type (case_type),
-    INDEX idx_cnr_number (cnr_number)
+    INDEX idx_cnr_number (cnr_number),
+    INDEX idx_unique_case_id (unique_case_id)
 );
 
 -- Case parties (complainants, defendants, accused, plaintiffs, decree holders)

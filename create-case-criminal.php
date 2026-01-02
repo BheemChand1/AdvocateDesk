@@ -46,6 +46,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
             <!-- Form Card -->
             <div class="bg-white rounded-xl shadow-md p-6 sm:p-8">
                 <form method="POST" action="create-case-process.php">
+                    <input type="hidden" name="case_type" value="CRIMINAL">
 
                     <!-- Case Type Display -->
                     <div class="mb-6 pb-4 border-b-2 border-blue-200 bg-blue-50 px-4 py-3 rounded-lg">
@@ -169,7 +170,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1 bg-red-600 text-white px-2 py-1 rounded">Case Type (drop down) <span class="text-yellow-300">*</span></label>
-                                <select name="case_type" required class="w-full px-3 py-2 border-2 border-red-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white">
+                                <select name="case_type_specific" required class="w-full px-3 py-2 border-2 border-red-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white">
                                     <option value="">Select case type</option>
                                     <option value="BAIL_APPLICATION_NO">BAIL APPLICATION NO.</option>
                                     <option value="CBI_CASES">CBI CASES</option>

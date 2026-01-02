@@ -46,6 +46,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
             <!-- Form Card -->
             <div class="bg-white rounded-xl shadow-md p-6 sm:p-8">
                 <form method="POST" action="create-case-process.php">
+                    <input type="hidden" name="case_type" value="CONSUMER_CIVIL">
 
                     <!-- Case Type Display -->
                     <div class="mb-6 pb-4 border-b-2 border-blue-200 bg-blue-50 px-4 py-3 rounded-lg">
@@ -111,7 +112,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                 </div>
                                 <div>
                                     <label class="block text-gray-700 text-sm font-semibold mb-1 bg-red-600 text-white px-2 py-1 rounded">Case Type (drop down) <span class="text-yellow-300">*</span></label>
-                                    <select name="case_type" required class="w-full px-3 py-2 border-2 border-red-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white">
+                                    <select name="case_type_specific" required class="w-full px-3 py-2 border-2 border-red-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white">
                                         <option value="">Select case type</option>
                                         <option value="DIST_CONS">DIST. CONS.</option>
                                         <option value="ORIGINAL_SUIT">ORIGINAL SUIT</option>
@@ -205,7 +206,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-gray-700 text-sm font-semibold mb-1">Complainant <span class="text-red-500">*</span></label>
-                                    <input type="text" name="complainant" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter complainant name">
+                                    <input type="text" name="complainant_name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter complainant name">
                                 </div>
                                 <div>
                                     <label class="block text-gray-700 text-sm font-semibold mb-1">Complainant ADDRESS <span class="text-red-500">*</span></label>
@@ -230,7 +231,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-gray-700 text-sm font-semibold mb-1">DEFENDANT <span class="text-red-500">*</span></label>
-                                    <input type="text" name="defendant" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter defendant name">
+                                    <input type="text" name="defendant_name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter defendant name">
                                 </div>
                                 <div>
                                     <label class="block text-gray-700 text-sm font-semibold mb-1">DEFENDANT ADDRESS <span class="text-red-500">*</span></label>
