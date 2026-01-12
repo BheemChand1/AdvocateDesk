@@ -62,6 +62,17 @@ $fee_grid = [];
 while ($row = mysqli_fetch_assoc($result)) {
     $fee_grid[] = $row;
 }
+
+// Fetch case position updates
+$query = "SELECT * FROM case_position_updates WHERE case_id = ? ORDER BY update_date DESC, created_at DESC";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $case_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$position_updates = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $position_updates[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -399,6 +410,72 @@ while ($row = mysqli_fetch_assoc($result)) {
                     </div>
                     <?php endif; ?>
                 </div>
+            </div>
+
+            <!-- Case Position Updates / Stages -->
+            <div class="bg-white rounded-xl shadow-md p-6 sm:p-8 mb-6">
+                <div class="mb-6 pb-4 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-history text-blue-500 mr-2"></i>Case Position Updates & Stages
+                    </h2>
+                    <p class="text-gray-600 text-sm mt-1">Timeline of all case position updates</p>
+                </div>
+
+                <?php if (!empty($position_updates)): ?>
+                    <div class="relative">
+                        <!-- Timeline line -->
+                        <div class="absolute left-8 top-0 bottom-0 w-0.5 bg-blue-200"></div>
+                        
+                        <!-- Timeline items -->
+                        <div class="space-y-6">
+                            <?php foreach ($position_updates as $index => $update): ?>
+                                <div class="relative flex items-start gap-4">
+                                    <!-- Timeline dot -->
+                                    <div class="relative z-10 flex items-center justify-center w-16 h-16 flex-shrink-0">
+                                        <div class="w-10 h-10 rounded-full <?php echo $update['is_end_position'] ? 'bg-red-500' : 'bg-blue-500'; ?> flex items-center justify-center shadow-lg">
+                                            <i class="fas <?php echo $update['is_end_position'] ? 'fa-flag-checkered' : 'fa-circle'; ?> text-white <?php echo $update['is_end_position'] ? 'text-lg' : 'text-xs'; ?>"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Update card -->
+                                    <div class="flex-1 bg-gray-50 rounded-lg p-4 shadow-sm border <?php echo $update['is_end_position'] ? 'border-red-300' : 'border-gray-200'; ?>">
+                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                            <h3 class="text-lg font-bold <?php echo $update['is_end_position'] ? 'text-red-600' : 'text-gray-800'; ?>">
+                                                <?php echo htmlspecialchars($update['position']); ?>
+                                                <?php if ($update['is_end_position']): ?>
+                                                    <span class="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">End Position</span>
+                                                <?php endif; ?>
+                                            </h3>
+                                            <span class="text-sm text-gray-600">
+                                                <i class="fas fa-calendar mr-1"></i>
+                                                <?php echo date('d M, Y', strtotime($update['update_date'])); ?>
+                                            </span>
+                                        </div>
+                                        
+                                        <?php if (!empty($update['remarks'])): ?>
+                                            <div class="mt-2 text-sm text-gray-700 bg-white p-3 rounded border border-gray-200">
+                                                <p class="font-semibold text-gray-600 mb-1"><i class="fas fa-comment-dots mr-1"></i>Remarks:</p>
+                                                <p><?php echo nl2br(htmlspecialchars($update['remarks'])); ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <div class="mt-2 text-xs text-gray-500">
+                                            <i class="fas fa-clock mr-1"></i>Updated on <?php echo date('d M, Y h:i A', strtotime($update['created_at'])); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="text-center py-12">
+                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-history text-gray-400 text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Position Updates</h3>
+                        <p class="text-gray-600">No case position updates have been recorded yet.</p>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Action Buttons -->

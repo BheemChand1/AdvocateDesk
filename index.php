@@ -18,6 +18,23 @@ $case_type_labels = [
     'ARBITRATION_OTHER' => 'Arbitration Other Than EP'
 ];
 
+// Create case_accounts table if it doesn't exist
+$create_table_sql = "
+CREATE TABLE IF NOT EXISTS case_accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    case_id INT NOT NULL,
+    bill_number VARCHAR(100),
+    bill_date DATE,
+    payment_status ENUM('pending', 'processing', 'completed') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_case_account (case_id)
+);
+";
+
+mysqli_query($conn, $create_table_sql);
+
 // Fetch dashboard statistics
 $stats = [];
 
@@ -50,6 +67,25 @@ $stats['closed_cases'] = $row['count'] ?? 0;
 $result = mysqli_query($conn, "SELECT COUNT(DISTINCT case_type) as count FROM cases");
 $row = mysqli_fetch_assoc($result);
 $stats['case_types'] = $row['count'] ?? 0;
+
+// Get account pending count
+$pending_accounts_sql = "
+SELECT COUNT(DISTINCT c.id) as total
+FROM cases c
+LEFT JOIN case_accounts ca ON c.id = ca.case_id
+WHERE ca.id IS NULL
+";
+$pending_result = mysqli_query($conn, $pending_accounts_sql);
+$stats['account_pending'] = mysqli_fetch_assoc($pending_result)['total'] ?? 0;
+
+// Get account processing count
+$processing_accounts_sql = "
+SELECT COUNT(*) as total
+FROM case_accounts
+WHERE payment_status = 'processing'
+";
+$processing_result = mysqli_query($conn, $processing_accounts_sql);
+$stats['account_processing'] = mysqli_fetch_assoc($processing_result)['total'] ?? 0;
 
 // Cases by Case Type
 $result = mysqli_query($conn, "SELECT case_type, COUNT(*) as count FROM cases GROUP BY case_type ORDER BY count DESC");
@@ -177,34 +213,30 @@ while ($row = mysqli_fetch_assoc($result)) {
                         <p class="text-xs sm:text-sm text-white/70">Available categories</p>
                     </div>
                 </div>
-            </div>
 
-            <!-- Case Type Breakdown -->
-            <div class="mt-12">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">
-                    <i class="fas fa-chart-bar text-blue-500 mr-2"></i>Cases by Type
-                </h2>
-                <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8">
-                    <?php if (!empty($case_type_breakdown)): ?>
-                    <div class="space-y-6">
-                        <?php foreach ($case_type_breakdown as $type): ?>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center flex-1">
-                                <span class="text-gray-700 font-semibold min-w-max max-w-xs"><?php echo htmlspecialchars($case_type_labels[$type['case_type']] ?? $type['case_type']); ?></span>
-                                <div class="flex-1 mx-4 bg-gray-200 rounded-full h-2.5">
-                                    <div class="bg-blue-500 h-2.5 rounded-full" style="width: <?php echo ($type['count'] / $stats['total_cases'] * 100); ?>%"></div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="font-bold text-gray-800"><?php echo $type['count']; ?></span>
-                                <span class="text-gray-500 text-sm ml-2">(<?php echo round(($type['count'] / $stats['total_cases'] * 100), 1); ?>%)</span>
+                <!-- Card 7 - Accounts -->
+                <div class="stat-card gradient-accounts rounded-xl p-6 sm:p-8 text-white shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="text-white/80 text-sm sm:text-base mb-2">Accounts</p>
+                            <div class="flex gap-4">
+                                <a href="pending-cases.php" class="hover:scale-110 transition transform cursor-pointer">
+                                    <div class="text-2xl font-bold"><?php echo $stats['account_pending']; ?></div>
+                                    <p class="text-xs text-white/70">Pending</p>
+                                </a>
+                                <a href="processing-fees.php" class="hover:scale-110 transition transform cursor-pointer">
+                                    <div class="text-2xl font-bold"><?php echo $stats['account_processing']; ?></div>
+                                    <p class="text-xs text-white/70">Processing</p>
+                                </a>
                             </div>
                         </div>
-                        <?php endforeach; ?>
+                        <div class="icon-box">
+                            <i class="fas fa-wallet text-2xl"></i>
+                        </div>
                     </div>
-                    <?php else: ?>
-                    <p class="text-gray-500 text-center py-8">No cases available</p>
-                    <?php endif; ?>
+                    <div class="pt-4 border-t border-white/20">
+                        <p class="text-xs sm:text-sm text-white/70">Click on pending or processing to manage</p>
+                    </div>
                 </div>
             </div>
 

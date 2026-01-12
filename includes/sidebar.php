@@ -54,6 +54,33 @@
             </div>
         </div>
 
+        <a href="cause-list.php" class="sidebar-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Cause List</span>
+        </a>
+
+        <div class="sidebar-dropdown">
+            <a href="#" class="sidebar-item has-dropdown">
+                <i class="fas fa-wallet"></i>
+                <span>Accounts</span>
+                <i class="fas fa-chevron-down dropdown-icon"></i>
+            </a>
+            <div class="submenu">
+                <a href="pending-cases.php" class="submenu-item">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span>Pending Cases</span>
+                </a>
+                <a href="processing-fees.php" class="submenu-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Processing Fees</span>
+                </a>
+                <a href="completed-fees.php" class="submenu-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Completed Fees</span>
+                </a>
+            </div>
+        </div>
+
          <!-- <a href="#" class="sidebar-item">
             <i class="fas fa-user-slash"></i>
             <span>Defendants</span>
