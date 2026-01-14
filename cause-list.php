@@ -45,8 +45,10 @@ $query = "SELECT
         '',
         ''
     ) as court_name,
-    cpu.update_date as latest_position_date,
-    cpu.position as latest_position
+    latest.update_date as latest_position_date,
+    latest.position as latest_position,
+    previous.update_date as previous_position_date,
+    previous.position as previous_position
 FROM cases c
 LEFT JOIN clients cl ON c.client_id = cl.client_id
 LEFT JOIN case_ni_passa_details ni ON c.id = ni.case_id
@@ -62,7 +64,21 @@ LEFT JOIN (
         FROM case_position_updates
         GROUP BY case_id
     )
-) cpu ON c.id = cpu.case_id
+) latest ON c.id = latest.case_id
+LEFT JOIN (
+    SELECT case_id, update_date, position
+    FROM case_position_updates
+    WHERE (case_id, update_date) IN (
+        SELECT case_id, MAX(update_date)
+        FROM case_position_updates
+        WHERE update_date < (
+            SELECT MAX(update_date)
+            FROM case_position_updates cp2
+            WHERE cp2.case_id = case_position_updates.case_id
+        )
+        GROUP BY case_id
+    )
+) previous ON c.id = previous.case_id
 WHERE c.status != 'closed'";
 
 // Apply filters
@@ -75,7 +91,7 @@ if (!empty($status_filter)) {
 }
 
 // Order by latest position update date if exists, otherwise by filing date (most recent first)
-$query .= " ORDER BY COALESCE(cpu.update_date, COALESCE(
+$query .= " ORDER BY COALESCE(latest.update_date, COALESCE(
     ni.filing_date,
     cr.filing_date,
     cc.case_filling_date,
@@ -201,6 +217,52 @@ if ($stages_result) {
                 </div>
             </div>
 
+            <!-- Filter Bar -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-filter text-blue-500 mr-2"></i>Filters
+                </h3>
+                <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Case Type Filter -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">Case Type</label>
+                        <select name="case_type" onchange="this.form.submit()" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Case Types</option>
+                            <?php foreach ($case_types as $type): ?>
+                                <option value="<?php echo htmlspecialchars($type); ?>" 
+                                        <?php echo $case_type_filter == $type ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $type))); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <!-- Show Entries Dropdown -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">Show Entries</label>
+                        <select id="entriesPerPage" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="10">10 entries</option>
+                            <option value="25" selected>25 entries</option>
+                            <option value="50">50 entries</option>
+                            <option value="100">100 entries</option>
+                            <option value="all">Show All</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Clear Filters -->
+                    <?php if (!empty($case_type_filter) || !empty($status_filter)): ?>
+                        <div class="flex items-end">
+                            <a href="cause-list.php" 
+                               class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-center font-medium">
+                                <i class="fas fa-times mr-2"></i>Clear Filters
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </form>
+            </div>
+
             <!-- Cases Table -->
             <div class="bg-white rounded-xl shadow-md overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
@@ -211,14 +273,17 @@ if ($stages_result) {
 
                 <?php if (count($cases) > 0): ?>
                     <div class="overflow-x-auto">
-                        <table class="w-full">
+                        <table class="w-full" id="casesTable">
                             <thead class="bg-gray-50 border-b border-gray-200">
                                 <tr>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Case ID
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Latest Update Date
+                                        Fixed Date
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Previous Date
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Customer Name
@@ -243,7 +308,7 @@ if ($stages_result) {
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
+                            <tbody class="divide-y divide-gray-200" id="casesTableBody">
                                 <?php foreach ($cases as $case): ?>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="px-6 py-4 whitespace-nowrap">
@@ -264,6 +329,18 @@ if ($stages_result) {
                                                     }
                                                 } else {
                                                     echo '<span class="text-gray-400">Not Filed</span>';
+                                                }
+                                                ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900 font-semibold">
+                                                <?php 
+                                                if ($case['previous_position_date']) {
+                                                    echo date('d M, Y', strtotime($case['previous_position_date']));
+                                                    echo '<br><span class="text-xs text-gray-500"><i class="fas fa-history mr-1"></i>Previous</span>';
+                                                } else {
+                                                    echo '<span class="text-gray-400">No Previous</span>';
                                                 }
                                                 ?>
                                             </span>
@@ -335,6 +412,24 @@ if ($stages_result) {
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="p-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="startEntry">1</span> to <span id="endEntry">25</span> of <span id="totalEntries"><?php echo count($cases); ?></span> entries
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="previousPage()" id="prevBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div id="pageNumbers" class="flex gap-1">
+                                <!-- Page numbers will be added here by JavaScript -->
+                            </div>
+                            <button onclick="nextPage()" id="nextBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 <?php else: ?>
                     <div class="p-12 text-center">
@@ -511,6 +606,111 @@ if ($stages_result) {
                 closeUpdateModal();
             }
         });
+        
+        // Pagination functionality
+        let currentPage = 1;
+        let entriesPerPage = 25;
+        let allRows = [];
+        
+        // Initialize pagination on page load
+        window.addEventListener('load', function() {
+            allRows = Array.from(document.querySelectorAll('#casesTableBody tr'));
+            
+            // Set up entries per page dropdown
+            const entriesDropdown = document.getElementById('entriesPerPage');
+            if (entriesDropdown) {
+                entriesDropdown.addEventListener('change', function() {
+                    if (this.value === 'all') {
+                        entriesPerPage = allRows.length;
+                    } else {
+                        entriesPerPage = parseInt(this.value);
+                    }
+                    currentPage = 1;
+                    updatePagination();
+                });
+            }
+            
+            updatePagination();
+        });
+        
+        function updatePagination() {
+            const totalPages = Math.ceil(allRows.length / entriesPerPage);
+            
+            // Hide all rows
+            allRows.forEach(row => row.style.display = 'none');
+            
+            // Show rows for current page
+            const startIndex = (currentPage - 1) * entriesPerPage;
+            const endIndex = startIndex + entriesPerPage;
+            
+            for (let i = startIndex; i < endIndex && i < allRows.length; i++) {
+                allRows[i].style.display = '';
+            }
+            
+            // Update pagination info
+            document.getElementById('startEntry').textContent = allRows.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('endEntry').textContent = Math.min(endIndex, allRows.length);
+            document.getElementById('totalEntries').textContent = allRows.length;
+            
+            // Update pagination buttons
+            updatePageNumbers(totalPages);
+            
+            // Enable/disable next and prev buttons
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+        }
+        
+        function updatePageNumbers(totalPages) {
+            const pageNumbersDiv = document.getElementById('pageNumbers');
+            pageNumbersDiv.innerHTML = '';
+            
+            // Show first page
+            if (totalPages > 0) {
+                const btn = createPageButton(1);
+                pageNumbersDiv.appendChild(btn);
+            }
+            
+            // Show pages around current page
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                const btn = createPageButton(i);
+                pageNumbersDiv.appendChild(btn);
+            }
+            
+            // Show last page
+            if (totalPages > 1) {
+                const btn = createPageButton(totalPages);
+                pageNumbersDiv.appendChild(btn);
+            }
+        }
+        
+        function createPageButton(pageNum) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = pageNum;
+            btn.className = pageNum === currentPage 
+                ? 'px-3 py-2 bg-blue-500 text-white rounded-lg font-semibold'
+                : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+            btn.onclick = () => {
+                currentPage = pageNum;
+                updatePagination();
+            };
+            return btn;
+        }
+        
+        function nextPage() {
+            const totalPages = Math.ceil(allRows.length / entriesPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+            }
+        }
+        
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        }
     </script>
 </body>
 

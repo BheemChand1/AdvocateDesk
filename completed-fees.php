@@ -85,15 +85,27 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
                 <!-- Completed Fees Table -->
                 <?php if (!empty($completed_accounts)): ?>
                 <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="bg-green-50 border-l-4 border-green-500 p-4">
-                        <h2 class="text-xl font-bold text-gray-800">
-                            <i class="fas fa-check-circle text-green-600 mr-2"></i>Completed Fees List
-                        </h2>
-                        <p class="text-gray-600 text-sm mt-1">Total Completed Cases: <strong><?php echo count($completed_accounts); ?></strong></p>
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">
+                                <i class="fas fa-check-circle text-green-600 mr-2"></i>Completed Fees List
+                            </h2>
+                            <p class="text-gray-600 text-sm mt-1">Total Completed Cases: <strong><?php echo count($completed_accounts); ?></strong></p>
+                        </div>
+                        <div>
+                            <label class="text-gray-700 text-sm font-semibold mr-2">Show Entries:</label>
+                            <select id="entriesPerPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="all">Show All</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="p-6">
                         <div class="overflow-x-auto">
-                            <table class="w-full">
+                            <table class="w-full" id="completedTable">
                                 <thead>
                                     <tr class="bg-gray-100 border-b-2 border-gray-300">
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case ID</th>
@@ -105,7 +117,7 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
                                         <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="completedTableBody">
                                     <?php foreach ($completed_accounts as $account): ?>
                                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                                         <td class="px-4 py-3 text-sm text-gray-700 font-medium"><?php echo htmlspecialchars($account['unique_case_id']); ?></td>
@@ -123,6 +135,24 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="p-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="startEntry">1</span> to <span id="endEntry">25</span> of <span id="totalEntries"><?php echo count($completed_accounts); ?></span> entries
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="previousPage()" id="prevBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div id="pageNumbers" class="flex gap-1">
+                                <!-- Page numbers will be added by JavaScript -->
+                            </div>
+                            <button onclick="nextPage()" id="nextBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -146,6 +176,127 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
     <?php include './includes/footer.php'; ?>
 
     <script src="./assets/script.js"></script>
+    
+    <script>
+        let currentPage = 1;
+        let entriesPerPage = 25;
+
+        // Initialize pagination on page load
+        window.addEventListener('load', function() {
+            setupPagination();
+        });
+
+        // Handle entries per page change
+        document.getElementById('entriesPerPage').addEventListener('change', function() {
+            entriesPerPage = this.value === 'all' ? document.querySelectorAll('#completedTableBody tr').length : parseInt(this.value);
+            currentPage = 1;
+            updatePagination();
+        });
+
+        function setupPagination() {
+            const totalRows = document.querySelectorAll('#completedTableBody tr').length;
+            document.getElementById('totalEntries').textContent = totalRows;
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const rows = document.querySelectorAll('#completedTableBody tr');
+            const totalRows = rows.length;
+            const totalPages = Math.ceil(totalRows / entriesPerPage);
+
+            // Update row visibility
+            rows.forEach((row, index) => {
+                const pageNum = Math.ceil((index + 1) / entriesPerPage);
+                row.style.display = pageNum === currentPage ? '' : 'none';
+            });
+
+            // Update pagination info
+            const startEntry = currentPage === 1 ? 1 : (currentPage - 1) * entriesPerPage + 1;
+            const endEntry = Math.min(currentPage * entriesPerPage, totalRows);
+            document.getElementById('startEntry').textContent = totalRows === 0 ? 0 : startEntry;
+            document.getElementById('endEntry').textContent = endEntry;
+
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+
+            // Update page numbers
+            updatePageNumbers(totalPages);
+        }
+
+        function updatePageNumbers(totalPages) {
+            const pageNumbersContainer = document.getElementById('pageNumbers');
+            pageNumbersContainer.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            // Show first page
+            pageNumbersContainer.appendChild(createPageButton(1));
+
+            // Show pages around current page
+            const startPage = Math.max(2, currentPage - 1);
+            const endPage = Math.min(totalPages - 1, currentPage + 1);
+
+            // Add ellipsis if needed
+            if (startPage > 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'px-2 py-2 text-gray-600';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+
+            // Add middle pages
+            for (let i = startPage; i <= endPage; i++) {
+                pageNumbersContainer.appendChild(createPageButton(i));
+            }
+
+            // Add ellipsis if needed
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'px-2 py-2 text-gray-600';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+
+            // Show last page
+            if (totalPages > 1) {
+                pageNumbersContainer.appendChild(createPageButton(totalPages));
+            }
+        }
+
+        function createPageButton(pageNum) {
+            const button = document.createElement('button');
+            button.className = `px-3 py-2 rounded-lg transition ${
+                currentPage === pageNum 
+                    ? 'bg-green-500 text-white' 
+                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`;
+            button.textContent = pageNum;
+            button.onclick = function() {
+                currentPage = pageNum;
+                updatePagination();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            return button;
+        }
+
+        function nextPage() {
+            const rows = document.querySelectorAll('#completedTableBody tr');
+            const totalRows = rows.length;
+            const totalPages = Math.ceil(totalRows / entriesPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        }
+    </script>
 </body>
 
 </html>

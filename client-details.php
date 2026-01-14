@@ -9,23 +9,54 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true)
 
 require_once 'includes/connection.php';
 
-// Get client ID from URL (for now using sample data)
-$client_id = isset($_GET['id']) ? intval($_GET['id']) : 1;
+// Get client ID from URL
+$client_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// Sample client data (will be replaced with database query later)
-$clients = [
-    1 => ['id' => 1, 'full_name' => 'Ramesh Kumar', 'father_name' => 'Suresh Kumar', 'mobile' => '9876543210', 'address' => '123 Main Street, Delhi'],
-    2 => ['id' => 2, 'full_name' => 'Priya Sharma', 'father_name' => 'Raj Sharma', 'mobile' => '9876543211', 'address' => '456 Park Avenue, Mumbai'],
-    3 => ['id' => 3, 'full_name' => 'Amit Patel', 'father_name' => 'Vikram Patel', 'mobile' => '9876543212', 'address' => '789 Lake Road, Bangalore']
-];
+if ($client_id <= 0) {
+    header("Location: view-clients.php");
+    exit();
+}
 
-$client = isset($clients[$client_id]) ? $clients[$client_id] : $clients[1];
+// Fetch client data
+$client_query = "SELECT * FROM clients WHERE client_id = ?";
+$client_stmt = mysqli_prepare($conn, $client_query);
+mysqli_stmt_bind_param($client_stmt, "i", $client_id);
+mysqli_stmt_execute($client_stmt);
+$client_result = mysqli_stmt_get_result($client_stmt);
 
-// Sample cases data (will be replaced with database query later)
-$cases = [
-    ['id' => 1, 'loan_number' => '1310746', 'product' => 'PL', 'branch_name' => 'DEHRADUN', 'cheque_no' => '000446', 'cheque_date' => '16.02.2018', 'cheque_amount' => '35784', 'bank_name_address' => 'HDFC, Rajpur rd', 'bounce_date' => '16.02.2018', 'bounce_reason' => 'Fund Insufficient', 'status' => 'Pending'],
-    ['id' => 2, 'loan_number' => '1310747', 'product' => 'HL', 'branch_name' => 'DELHI', 'cheque_no' => '000447', 'cheque_date' => '20.03.2018', 'cheque_amount' => '45000', 'bank_name_address' => 'ICICI, Connaught Place', 'bounce_date' => '20.03.2018', 'bounce_reason' => 'Account Closed', 'status' => 'Active']
-];
+if (!$client_result || mysqli_num_rows($client_result) === 0) {
+    header("Location: view-clients.php");
+    exit();
+}
+
+$client = mysqli_fetch_assoc($client_result);
+
+// Fetch cases for this client
+$cases_query = "SELECT 
+    c.id,
+    c.unique_case_id,
+    c.case_type,
+    c.loan_number,
+    c.status,
+    cl.name as customer_name,
+    cl.mobile,
+    cl.email
+FROM cases c
+LEFT JOIN clients cl ON c.client_id = cl.client_id
+WHERE c.client_id = ?
+ORDER BY c.created_at DESC";
+
+$cases_stmt = mysqli_prepare($conn, $cases_query);
+mysqli_stmt_bind_param($cases_stmt, "i", $client_id);
+mysqli_stmt_execute($cases_stmt);
+$cases_result = mysqli_stmt_get_result($cases_stmt);
+
+$cases = [];
+if ($cases_result) {
+    while ($row = mysqli_fetch_assoc($cases_result)) {
+        $cases[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -65,7 +96,7 @@ $cases = [
                     <h2 class="text-2xl font-bold text-gray-800">
                         <i class="fas fa-info-circle text-blue-500 mr-2"></i>Client Information
                     </h2>
-                    <a href="edit-client.php?id=<?php echo $client['id']; ?>" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition">
+                    <a href="edit-client.php?id=<?php echo $client['client_id']; ?>" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition">
                         <i class="fas fa-edit mr-2"></i>Edit Client
                     </a>
                 </div>
@@ -78,7 +109,7 @@ $cases = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Client ID</p>
-                            <p class="text-lg font-semibold text-gray-800">#<?php echo str_pad($client['id'], 4, '0', STR_PAD_LEFT); ?></p>
+                            <p class="text-lg font-semibold text-gray-800">#<?php echo str_pad($client['client_id'], 4, '0', STR_PAD_LEFT); ?></p>
                         </div>
                     </div>
 
@@ -89,7 +120,7 @@ $cases = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Full Name</p>
-                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['full_name']); ?></p>
+                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['name']); ?></p>
                         </div>
                     </div>
 
@@ -100,7 +131,7 @@ $cases = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Father's Name</p>
-                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['father_name']); ?></p>
+                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['father_name'] ?? 'N/A'); ?></p>
                         </div>
                     </div>
 
@@ -118,6 +149,39 @@ $cases = [
                         </div>
                     </div>
 
+                    <!-- Email -->
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-envelope text-pink-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">Email</p>
+                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['email'] ?? 'N/A'); ?></p>
+                        </div>
+                    </div>
+
+                    <!-- PAN Number -->
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-id-card text-yellow-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">PAN Number</p>
+                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['pan_number'] ?? 'N/A'); ?></p>
+                        </div>
+                    </div>
+
+                    <!-- GST Number -->
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-file-invoice text-indigo-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">GST Number</p>
+                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['gst_number'] ?? 'N/A'); ?></p>
+                        </div>
+                    </div>
+
                     <!-- Address -->
                     <div class="flex items-start md:col-span-2">
                         <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
@@ -125,7 +189,7 @@ $cases = [
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Address</p>
-                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['address']); ?></p>
+                            <p class="text-lg font-semibold text-gray-800"><?php echo htmlspecialchars($client['address'] ?? 'N/A'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -133,87 +197,109 @@ $cases = [
 
             <!-- Cases Section -->
             <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                <div class="px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-between">
-                    <h2 class="text-2xl font-bold text-white">
-                        <i class="fas fa-briefcase mr-2"></i>Cases (<?php echo count($cases); ?>)
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-briefcase text-blue-500 mr-2"></i>Cases (<?php echo count($cases); ?>)
                     </h2>
-                    <a href="create-case.php?client_id=<?php echo $client['id']; ?>" 
-                        class="px-4 py-2 bg-white text-blue-600 hover:bg-gray-100 rounded-lg transition font-semibold">
-                        <i class="fas fa-plus mr-2"></i>Create New Case
-                    </a>
                 </div>
 
-                <!-- Cases List -->
-                <div class="p-6">
-                    <?php if (count($cases) > 0): ?>
-                        <div class="space-y-4">
-                            <?php foreach ($cases as $case): ?>
-                                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                                    <div class="flex flex-col gap-4">
-                                        <div class="flex items-center gap-3">
-                                            <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
-                                                Loan #<?php echo $case['loan_number']; ?>
-                                            </span>
-                                            <span class="px-3 py-1 <?php echo $case['status'] == 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?> text-sm font-semibold rounded-full">
-                                                <?php echo $case['status']; ?>
-                                            </span>
-                                        </div>
-                                        
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Product</p>
-                                                <p class="font-semibold text-gray-800"><?php echo $case['product']; ?></p>
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Branch Name</p>
-                                                <p class="font-semibold text-gray-800"><?php echo $case['branch_name']; ?></p>
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Cheque No</p>
-                                                <p class="font-semibold text-gray-800"><?php echo $case['cheque_no']; ?></p>
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Cheque Date</p>
-                                                <p class="font-semibold text-gray-800"><?php echo $case['cheque_date']; ?></p>
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Cheque Amount</p>
-                                                <p class="font-semibold text-gray-800">₹<?php echo number_format($case['cheque_amount']); ?></p>
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Bank Name & Address</p>
-                                                <p class="font-semibold text-gray-800"><?php echo $case['bank_name_address']; ?></p>
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Bounce Date</p>
-                                                <p class="font-semibold text-gray-800"><?php echo $case['bounce_date']; ?></p>
-                                            </div>
-                                            <div>
-                                                <p class="text-gray-500 mb-1">Bounce Reason</p>
-                                                <p class="font-semibold text-red-600"><?php echo $case['bounce_reason']; ?></p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-200">
-                                            <button class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
-                                                <i class="fas fa-eye mr-2"></i>View Details
+                <?php if (count($cases) > 0): ?>
+                    <!-- Desktop Table View -->
+                    <div class="hidden md:block overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">Case ID</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">Loan No.</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">Case Type</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold">Status</th>
+                                    <th class="px-6 py-4 text-center text-sm font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <?php foreach ($cases as $case): ?>
+                                <tr class="hover:bg-gray-50 transition">
+                                    <td class="px-6 py-4 text-sm font-bold text-purple-600"><?php echo htmlspecialchars($case['unique_case_id'] ?? '-'); ?></td>
+                                    <td class="px-6 py-4 text-sm font-medium text-blue-600"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                                            <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $case['case_type'] ?? '-'))); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <span class="px-3 py-1 <?php 
+                                            $status = strtolower($case['status'] ?? 'pending');
+                                            echo $status == 'active' ? 'bg-green-100 text-green-800' : 
+                                                 ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                                 ($status == 'closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
+                                        ?> rounded-full text-xs font-semibold">
+                                            <?php echo htmlspecialchars(ucfirst($case['status'] ?? 'Pending')); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center justify-center space-x-3">
+                                            <a href="case-details.php?id=<?php echo $case['id']; ?>" class="text-blue-600 hover:text-blue-800 transition" title="View Details">
+                                                <i class="fas fa-eye text-lg"></i>
+                                            </a>
+                                            <button onclick="deleteCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="text-red-600 hover:text-red-800 transition" title="Delete">
+                                                <i class="fas fa-trash text-lg"></i>
                                             </button>
                                         </div>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Card View -->
+                    <div class="md:hidden divide-y divide-gray-200">
+                        <?php foreach ($cases as $case): ?>
+                        <div class="p-4 hover:bg-gray-50 transition">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
+                                            <?php echo htmlspecialchars($case['unique_case_id'] ?? '-'); ?>
+                                        </span>
+                                        <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                                            <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $case['case_type'] ?? '-'))); ?>
+                                        </span>
+                                        <span class="inline-block px-2 py-1 <?php 
+                                            $status = strtolower($case['status'] ?? 'pending');
+                                            echo $status == 'active' ? 'bg-green-100 text-green-800' : 
+                                                 ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                                 ($status == 'closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
+                                        ?> rounded-full text-xs font-semibold">
+                                            <?php echo htmlspecialchars(ucfirst($case['status'] ?? 'Pending')); ?>
+                                        </span>
                                     </div>
+                                    <p class="text-sm text-blue-600 font-semibold">Loan #<?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></p>
                                 </div>
-                            <?php endforeach; ?>
+                            </div>
+                            <div class="flex items-center justify-end space-x-4 pt-3 border-t border-gray-200">
+                                <a href="case-details.php?id=<?php echo $case['id']; ?>" class="flex items-center px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                                    <i class="fas fa-eye mr-2"></i>View
+                                </a>
+                                <button onclick="deleteCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                                    <i class="fas fa-trash mr-2"></i>Delete
+                                </button>
+                            </div>
                         </div>
-                    <?php else: ?>
-                        <div class="text-center py-12">
-                            <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
-                            <p class="text-gray-500 text-lg mb-4">No cases found for this client</p>
-                            <a href="create-case.php?client_id=<?php echo $client['id']; ?>" 
-                                class="inline-block px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
-                                <i class="fas fa-plus mr-2"></i>Create First Case
-                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="p-12 text-center">
+                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-folder-open text-gray-400 text-3xl"></i>
                         </div>
-                    <?php endif; ?>
-                </div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Cases Found</h3>
+                        <p class="text-gray-600 mb-6">No cases registered for this client yet.</p>
+                        <a href="create-case.php?client_id=<?php echo $client['client_id']; ?>" class="inline-flex items-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-plus-circle mr-2"></i>Create New Case
+                        </a>
+                    </div>
+                <?php endif; ?>
             </div>
         </main>
 
@@ -221,6 +307,34 @@ $cases = [
     </div>
 
     <script src="./assets/script.js"></script>
+    <script>
+        function deleteCase(caseId, caseIdDisplay) {
+            if (!confirm(`Are you sure you want to delete case ${caseIdDisplay}? This action cannot be undone.`)) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('case_id', caseId);
+
+            fetch('delete-case.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Case deleted successfully');
+                    location.reload();
+                } else {
+                    alert('Error deleting case: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the case');
+            });
+        }
+    </script>
 </body>
 
 </html>

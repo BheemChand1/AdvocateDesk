@@ -113,15 +113,27 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
                 <!-- Processing Fees Table -->
                 <?php if (!empty($processing_accounts)): ?>
                 <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
-                        <h2 class="text-xl font-bold text-gray-800">
-                            <i class="fas fa-hourglass-start text-blue-600 mr-2"></i>Processing Fees List
-                        </h2>
-                        <p class="text-gray-600 text-sm mt-1">Total Processing Cases: <strong><?php echo count($processing_accounts); ?></strong></p>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">
+                                <i class="fas fa-hourglass-start text-blue-600 mr-2"></i>Processing Fees List
+                            </h2>
+                            <p class="text-gray-600 text-sm mt-1">Total Processing Cases: <strong><?php echo count($processing_accounts); ?></strong></p>
+                        </div>
+                        <div>
+                            <label class="text-gray-700 text-sm font-semibold mr-2">Show Entries:</label>
+                            <select id="entriesPerPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="all">Show All</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="p-6">
                         <div class="overflow-x-auto">
-                            <table class="w-full">
+                            <table class="w-full" id="processingTable">
                                 <thead>
                                     <tr class="bg-gray-100 border-b-2 border-gray-300">
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case ID</th>
@@ -133,7 +145,7 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
                                         <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Update Status</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="processingTableBody">
                                     <?php foreach ($processing_accounts as $account): ?>
                                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                                         <td class="px-4 py-3 text-sm text-gray-700 font-medium"><?php echo htmlspecialchars($account['unique_case_id']); ?></td>
@@ -160,6 +172,24 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
                             </table>
                         </div>
                     </div>
+                    
+                    <!-- Pagination -->
+                    <div class="p-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="startEntry">1</span> to <span id="endEntry">25</span> of <span id="totalEntries"><?php echo count($processing_accounts); ?></span> entries
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="previousPage()" id="prevBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div id="pageNumbers" class="flex gap-1">
+                                <!-- Page numbers will be added by JavaScript -->
+                            </div>
+                            <button onclick="nextPage()" id="nextBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <?php else: ?>
                 <div class="bg-white rounded-lg shadow overflow-hidden">
@@ -181,6 +211,101 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
     <?php include './includes/footer.php'; ?>
 
     <script src="./assets/script.js"></script>
+    <script>
+        let currentPage = 1;
+        let entriesPerPage = 25;
+        let allRows = [];
+        
+        window.addEventListener('load', function() {
+            allRows = Array.from(document.querySelectorAll('#processingTableBody tr'));
+            
+            const entriesDropdown = document.getElementById('entriesPerPage');
+            if (entriesDropdown) {
+                entriesDropdown.addEventListener('change', function() {
+                    if (this.value === 'all') {
+                        entriesPerPage = allRows.length;
+                    } else {
+                        entriesPerPage = parseInt(this.value);
+                    }
+                    currentPage = 1;
+                    updatePagination();
+                });
+            }
+            
+            updatePagination();
+        });
+        
+        function updatePagination() {
+            const totalPages = Math.ceil(allRows.length / entriesPerPage);
+            
+            allRows.forEach(row => row.style.display = 'none');
+            
+            const startIndex = (currentPage - 1) * entriesPerPage;
+            const endIndex = startIndex + entriesPerPage;
+            
+            for (let i = startIndex; i < endIndex && i < allRows.length; i++) {
+                allRows[i].style.display = '';
+            }
+            
+            document.getElementById('startEntry').textContent = allRows.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('endEntry').textContent = Math.min(endIndex, allRows.length);
+            document.getElementById('totalEntries').textContent = allRows.length;
+            
+            updatePageNumbers(totalPages);
+            
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+        }
+        
+        function updatePageNumbers(totalPages) {
+            const pageNumbersDiv = document.getElementById('pageNumbers');
+            pageNumbersDiv.innerHTML = '';
+            
+            if (totalPages > 0) {
+                const btn = createPageButton(1);
+                pageNumbersDiv.appendChild(btn);
+            }
+            
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                const btn = createPageButton(i);
+                pageNumbersDiv.appendChild(btn);
+            }
+            
+            if (totalPages > 1) {
+                const btn = createPageButton(totalPages);
+                pageNumbersDiv.appendChild(btn);
+            }
+        }
+        
+        function createPageButton(pageNum) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = pageNum;
+            btn.className = pageNum === currentPage 
+                ? 'px-3 py-2 bg-blue-500 text-white rounded-lg font-semibold'
+                : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+            btn.onclick = () => {
+                currentPage = pageNum;
+                updatePagination();
+            };
+            return btn;
+        }
+        
+        function nextPage() {
+            const totalPages = Math.ceil(allRows.length / entriesPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+            }
+        }
+        
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        }
+    </script>
 </body>
 
 </html>

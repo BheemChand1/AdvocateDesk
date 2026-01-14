@@ -73,6 +73,19 @@ $position_updates = [];
 while ($row = mysqli_fetch_assoc($result)) {
     $position_updates[] = $row;
 }
+
+// Fetch case accounts
+$query = "SELECT ca.* FROM case_accounts ca
+          WHERE ca.case_id = ?
+          ORDER BY ca.bill_date DESC, ca.created_at DESC";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $case_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$case_accounts = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $case_accounts[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -116,7 +129,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                         ?> rounded-lg text-sm font-bold">
                             <i class="fas fa-flag mr-2"></i><?php echo htmlspecialchars(ucfirst($case['status'])); ?>
                         </span>
-                        <a href="edit-case.php?id=<?php echo $case['id']; ?>" 
+                        <a href="edit-case-ep-arbitration.php?id=<?php echo $case['id']; ?>" 
                             class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition">
                             <i class="fas fa-edit mr-2"></i>Edit Case
                         </a>
@@ -687,6 +700,53 @@ while ($row = mysqli_fetch_assoc($result)) {
                         </div>
                         <h3 class="text-xl font-semibold text-gray-800 mb-2">No Position Updates</h3>
                         <p class="text-gray-600">No case position updates have been recorded yet.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Case Accounts Section -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b-2 border-blue-200">
+                    <i class="fas fa-file-invoice-dollar text-blue-500 mr-3"></i>Case Accounts
+                </h2>
+                
+                <?php if (!empty($case_accounts)): ?>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-blue-50 border-b-2 border-blue-200">
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Number</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Date</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Payment Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <?php foreach ($case_accounts as $account): ?>
+                                <tr class="hover:bg-gray-50 transition">
+                                    <td class="px-4 py-3 text-sm font-mono text-blue-600 font-semibold"><?php echo htmlspecialchars($account['bill_number'] ?? 'N/A'); ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-700"><?php echo $account['bill_date'] ? date('d M, Y', strtotime($account['bill_date'])) : 'N/A'; ?></td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <span class="px-3 py-1 rounded-full text-xs font-semibold <?php 
+                                            $status = strtolower($account['payment_status'] ?? 'pending');
+                                            echo $status == 'completed' ? 'bg-green-100 text-green-800' : 
+                                                 ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                                 ($status == 'processing' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'));
+                                        ?>">
+                                            <?php echo htmlspecialchars(ucfirst($account['payment_status'] ?? 'pending')); ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <div class="text-center py-12">
+                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-inbox text-gray-400 text-3xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Accounts</h3>
+                        <p class="text-gray-600">No case accounts have been recorded yet.</p>
                     </div>
                 <?php endif; ?>
             </div>

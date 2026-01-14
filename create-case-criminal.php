@@ -314,7 +314,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="NOTICE" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -327,7 +327,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="FILING" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -340,7 +340,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="SUMMON" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -353,7 +353,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="BAILABLE WARRANT" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -366,7 +366,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="NON BAILABLE WARRANT" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -379,7 +379,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="PROCLAMATION" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -392,7 +392,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="PROSECUTION EVIDENCE" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -405,7 +405,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="STATEMENT OF ACCUSED" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -418,7 +418,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="DEFENSE EVIDENCE" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -431,7 +431,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="ARGUMENT" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -444,7 +444,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="JUDGMENT" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -457,7 +457,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="BAIL" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -470,7 +470,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                                 <input type="text" name="fee_grid_name[]" value="Misc" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2">
-                                                <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" class="remove-fee text-red-500 hover:text-red-700">
@@ -588,7 +588,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                         <input type="text" name="fee_grid_name[]" class="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter fee name">
                     </td>
                     <td class="px-4 py-2">
-                        <input type="number" name="fee_grid_amount[]" value="100" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="number" name="fee_grid_amount[]" value="0" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded bg-white text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </td>
                     <td class="px-4 py-2 text-center">
                         <button type="button" class="remove-fee text-red-500 hover:text-red-700">

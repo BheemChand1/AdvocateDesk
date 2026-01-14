@@ -11,9 +11,10 @@ require_once 'includes/connection.php';
 
 // Get search query
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 
 // Fetch cases from database with search
-$query = "SELECT 
+$query = "SELECT DISTINCT
     c.id,
     c.unique_case_id,
     c.case_type,
@@ -23,20 +24,30 @@ $query = "SELECT
     cl.mobile,
     cl.email
 FROM cases c
-LEFT JOIN clients cl ON c.client_id = cl.client_id";
+LEFT JOIN clients cl ON c.client_id = cl.client_id
+LEFT JOIN case_parties cp ON c.id = cp.case_id
+WHERE 1=1";
 
+// Add status filter
+if (!empty($status_filter)) {
+    $query .= " AND c.status = '" . mysqli_real_escape_string($conn, $status_filter) . "'";
+}
+
+// Add search filter
 if (!empty($search_query)) {
     $search_term = '%' . $search_query . '%';
-    $query .= " WHERE c.loan_number LIKE ? 
+    $query .= " AND (c.loan_number LIKE ? 
                OR c.unique_case_id LIKE ? 
-               OR cl.name LIKE ?";
+               OR cl.name LIKE ?
+               OR cp.name LIKE ?
+               OR c.cnr_number LIKE ?)";
 }
 
 $query .= " ORDER BY c.created_at DESC";
 
 if (!empty($search_query)) {
     $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_bind_param($stmt, "sss", $search_term, $search_term, $search_term);
+    mysqli_stmt_bind_param($stmt, "sssss", $search_term, $search_term, $search_term, $search_term, $search_term);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
 } else {
@@ -74,9 +85,27 @@ if ($result) {
             <!-- Header -->
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-gray-800 mb-2">
-                    <i class="fas fa-briefcase text-blue-500 mr-3"></i>All Cases
+                    <i class="fas fa-briefcase text-blue-500 mr-3"></i><?php 
+                    if ($status_filter === 'active') {
+                        echo 'Active Cases';
+                    } elseif ($status_filter === 'closed') {
+                        echo 'Closed Cases';
+                    } else {
+                        echo 'All Cases';
+                    }
+                    ?>
                 </h1>
-                <p class="text-gray-600">View and manage all cases in the system</p>
+                <p class="text-gray-600">
+                    <?php 
+                    if ($status_filter === 'active') {
+                        echo 'Currently active cases in the system';
+                    } elseif ($status_filter === 'closed') {
+                        echo 'Completed and closed cases';
+                    } else {
+                        echo 'View and manage all cases in the system';
+                    }
+                    ?>
+                </p>
             </div>
 
             <!-- Action Bar -->
@@ -91,10 +120,11 @@ if ($result) {
                                     class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
+                            <input type="hidden" name="status" value="<?php echo htmlspecialchars($status_filter); ?>">
                             <button type="submit" class="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
                                 <i class="fas fa-search mr-2"></i>Search
                             </button>
-                            <?php if (!empty($search_query)): ?>
+                            <?php if (!empty($search_query) || !empty($status_filter)): ?>
                                 <a href="view-cases.php" class="px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
                                     <i class="fas fa-times mr-2"></i>Clear
                                 </a>
@@ -162,10 +192,7 @@ if ($result) {
                                         <a href="case-details.php?id=<?php echo $case['id']; ?>" class="text-blue-600 hover:text-blue-800 transition" title="View Details">
                                             <i class="fas fa-eye text-lg"></i>
                                         </a>
-                                        <button class="text-green-600 hover:text-green-800 transition" title="Edit">
-                                            <i class="fas fa-edit text-lg"></i>
-                                        </button>
-                                        <button class="text-red-600 hover:text-red-800 transition" title="Delete">
+                                        <button onclick="deleteCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="text-red-600 hover:text-red-800 transition" title="Delete">
                                             <i class="fas fa-trash text-lg"></i>
                                         </button>
                                     </div>
@@ -223,10 +250,7 @@ if ($result) {
                             <a href="case-details.php?id=<?php echo $case['id']; ?>" class="flex items-center px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
                                 <i class="fas fa-eye mr-2"></i>View
                             </a>
-                            <button class="flex items-center px-3 py-2 text-green-600 hover:bg-green-50 rounded-lg transition">
-                                <i class="fas fa-edit mr-2"></i>Edit
-                            </button>
-                            <button class="flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                            <button onclick="deleteCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition">
                                 <i class="fas fa-trash mr-2"></i>Delete
                             </button>
                         </div>
@@ -255,6 +279,34 @@ if ($result) {
     </div>
 
     <script src="./assets/script.js"></script>
+    <script>
+        function deleteCase(caseId, caseIdDisplay) {
+            if (!confirm(`Are you sure you want to delete case ${caseIdDisplay}? This action cannot be undone.`)) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('case_id', caseId);
+
+            fetch('delete-case.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Case deleted successfully');
+                    location.reload();
+                } else {
+                    alert('Error deleting case: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the case');
+            });
+        }
+    </script>
 </body>
 
 </html>

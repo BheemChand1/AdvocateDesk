@@ -15,13 +15,15 @@ CREATE TABLE IF NOT EXISTS cases (
     region VARCHAR(200),
     complainant_authorised_person VARCHAR(200),
     status VARCHAR(50) DEFAULT 'active',
+    case_stage_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_by INT,
     INDEX idx_client_id (client_id),
     INDEX idx_case_type (case_type),
     INDEX idx_cnr_number (cnr_number),
-    INDEX idx_unique_case_id (unique_case_id)
+    INDEX idx_unique_case_id (unique_case_id),
+    INDEX idx_case_stage_id (case_stage_id)
 );
 
 -- Case parties (complainants, defendants, accused, plaintiffs, decree holders)

@@ -61,6 +61,24 @@
 
         <div class="sidebar-dropdown">
             <a href="#" class="sidebar-item has-dropdown">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>Notices</span>
+                <i class="fas fa-chevron-down dropdown-icon"></i>
+            </a>
+            <div class="submenu">
+                <a href="create-notice.php" class="submenu-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Create Notice</span>
+                </a>
+                <a href="view-notices.php" class="submenu-item">
+                    <i class="fas fa-list"></i>
+                    <span>View Notices</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="sidebar-dropdown">
+            <a href="#" class="sidebar-item has-dropdown">
                 <i class="fas fa-wallet"></i>
                 <span>Accounts</span>
                 <i class="fas fa-chevron-down dropdown-icon"></i>
