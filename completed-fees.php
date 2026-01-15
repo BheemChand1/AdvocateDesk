@@ -9,31 +9,72 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true)
 
 require_once 'includes/connection.php';
 
-// Fetch completed accounts data
+// Ensure case_position_updates has completed_date column
+$check_column_query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                       WHERE TABLE_NAME='case_position_updates' AND COLUMN_NAME='completed_date'";
+$result = mysqli_query($conn, $check_column_query);
+
+if (mysqli_num_rows($result) === 0) {
+    // Add completed_date column if it doesn't exist
+    mysqli_query($conn, "ALTER TABLE case_position_updates ADD COLUMN completed_date DATE");
+}
+
+// Fetch completed fees (show only fees with completed payment status from case_position_updates)
 $completed_sql = "
 SELECT 
-    ca.id,
-    ca.case_id,
-    ca.bill_number,
-    ca.bill_date,
-    ca.payment_status,
+    cpu.id as update_id,
+    cpu.case_id,
+    cpu.bill_number,
+    cpu.bill_date,
+    cpu.payment_status,
+    cpu.completed_date,
     c.unique_case_id,
     c.case_type,
     cl.name as client_name,
-    COALESCE(SUM(cfg.fee_amount), 0) as total_fee_amount
-FROM case_accounts ca
-JOIN cases c ON ca.case_id = c.id
+    cpu.fee_amount,
+    cpu.position as fee_name,
+    cpu.update_date
+FROM case_position_updates cpu
+JOIN cases c ON cpu.case_id = c.id
 JOIN clients cl ON c.client_id = cl.client_id
-LEFT JOIN case_fee_grid cfg ON c.id = cfg.case_id
-WHERE ca.payment_status = 'completed'
-GROUP BY ca.id, ca.case_id, ca.bill_number, ca.bill_date, ca.payment_status, c.unique_case_id, c.case_type, cl.name
-ORDER BY ca.updated_at DESC
+WHERE cpu.payment_status = 'completed'
+ORDER BY cpu.completed_date DESC, cpu.update_date DESC
 ";
 
 $completed_result = mysqli_query($conn, $completed_sql);
 $completed_accounts = [];
 while ($row = mysqli_fetch_assoc($completed_result)) {
     $completed_accounts[] = $row;
+}
+
+// Handle edit_fee and delete_fee actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'edit_fee') {
+        $update_id = mysqli_real_escape_string($conn, $_POST['update_id']);
+        $bill_number = mysqli_real_escape_string($conn, $_POST['bill_number']);
+        $bill_date = mysqli_real_escape_string($conn, $_POST['bill_date']);
+        $fee_amount = floatval($_POST['fee_amount']);
+        
+        $update_sql = "UPDATE case_position_updates SET bill_number = '$bill_number', bill_date = '$bill_date', fee_amount = $fee_amount WHERE id = $update_id";
+        
+        if (mysqli_query($conn, $update_sql)) {
+            header("Location: " . $_SERVER['PHP_SELF'] . "?success=Fee updated successfully");
+            exit();
+        } else {
+            $error = "Error updating fee: " . mysqli_error($conn);
+        }
+    } elseif ($_POST['action'] === 'delete_fee') {
+        $update_id = mysqli_real_escape_string($conn, $_POST['update_id']);
+        
+        $delete_sql = "DELETE FROM case_position_updates WHERE id = $update_id";
+        
+        if (mysqli_query($conn, $delete_sql)) {
+            header("Location: " . $_SERVER['PHP_SELF'] . "?success=Fee deleted successfully");
+            exit();
+        } else {
+            $error = "Error deleting fee: " . mysqli_error($conn);
+        }
+    }
 }
 
 ?>
@@ -68,9 +109,6 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
 
                 <!-- Navigation Buttons -->
                 <div class="mb-6 flex gap-3 flex-wrap">
-                    <a href="case-accounts.php" class="px-6 py-2 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition">
-                        <i class="fas fa-home mr-2"></i>Dashboard
-                    </a>
                     <a href="pending-cases.php" class="px-6 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 transition">
                         <i class="fas fa-hourglass-half mr-2"></i>Pending Cases
                     </a>
@@ -114,7 +152,9 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Number</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Date</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fee Amount</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Completed Date</th>
                                         <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
+                                        <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="completedTableBody">
@@ -125,11 +165,31 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['case_type']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['bill_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['bill_date'] ?? 'N/A'); ?></td>
-                                        <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-green-600">₹<?php echo number_format($account['total_fee_amount'], 2); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-green-600">₹<?php echo number_format($account['fee_amount'], 2); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-green-600">
+                                            <?php echo $account['completed_date'] ? date('d M, Y', strtotime($account['completed_date'])) : 'N/A'; ?>
+                                        </td>
                                         <td class="px-4 py-3 text-center">
                                             <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                                                 <i class="fas fa-check-circle mr-1"></i>Completed
                                             </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <button onclick="openEditModal(<?php echo htmlspecialchars(json_encode([
+                                                'update_id' => $account['update_id'],
+                                                'bill_number' => $account['bill_number'] ?? '',
+                                                'bill_date' => $account['bill_date'] ?? '',
+                                                'fee_amount' => $account['fee_amount']
+                                            ])); ?>)" class="px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition mr-2">
+                                                <i class="fas fa-edit mr-1"></i>Edit
+                                            </button>
+                                            <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this fee? This action cannot be undone.');">
+                                                <input type="hidden" name="action" value="delete_fee">
+                                                <input type="hidden" name="update_id" value="<?php echo htmlspecialchars($account['update_id']); ?>">
+                                                <button type="submit" class="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition">
+                                                    <i class="fas fa-trash mr-1"></i>Delete
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -173,9 +233,63 @@ while ($row = mysqli_fetch_assoc($completed_result)) {
         </div>
     </div>
 
+    <!-- Edit Fee Modal -->
+    <div id="editFeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="if(event.target === this) closeEditModal();">
+        <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Edit Fee Details</h2>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="edit_fee">
+                <input type="hidden" name="update_id" id="editUpdateId">
+                
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Bill Number</label>
+                    <input type="text" id="editBillNumber" name="bill_number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Bill Date</label>
+                    <input type="date" id="editBillDate" name="bill_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Fee Amount</label>
+                    <input type="number" id="editFeeAmount" name="fee_amount" step="0.01" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition">
+                        Update Fee
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <?php include './includes/footer.php'; ?>
 
     <script src="./assets/script.js"></script>
+    
+    <script>
+        function openEditModal(data) {
+            document.getElementById('editUpdateId').value = data.update_id;
+            document.getElementById('editBillNumber').value = data.bill_number;
+            document.getElementById('editBillDate').value = data.bill_date;
+            document.getElementById('editFeeAmount').value = data.fee_amount;
+            document.getElementById('editFeeModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editFeeModal').classList.add('hidden');
+        }
+    </script>
     
     <script>
         let currentPage = 1;

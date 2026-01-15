@@ -12,6 +12,7 @@ require_once 'includes/connection.php';
 // Get filter options
 $case_type_filter = isset($_GET['case_type']) ? $_GET['case_type'] : '';
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
+$search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 // Build the query to fetch cases with filing dates and latest position updates
 $query = "SELECT 
@@ -45,6 +46,9 @@ $query = "SELECT
         '',
         ''
     ) as court_name,
+    GROUP_CONCAT(DISTINCT CASE 
+        WHEN cp.party_type IN ('accused', 'defendant') THEN cp.name 
+    END SEPARATOR ', ') as accused_opposite_party,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
     previous.update_date as previous_position_date,
@@ -56,6 +60,7 @@ LEFT JOIN case_criminal_details cr ON c.id = cr.case_id
 LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
 LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
+LEFT JOIN case_parties cp ON c.id = cp.case_id
 LEFT JOIN (
     SELECT case_id, update_date, position
     FROM case_position_updates
@@ -81,6 +86,16 @@ LEFT JOIN (
 ) previous ON c.id = previous.case_id
 WHERE c.status != 'closed'";
 
+// Apply search filter
+if (!empty($search_query)) {
+    $search_term = '%' . mysqli_real_escape_string($conn, $search_query) . '%';
+    $query .= " AND (c.loan_number LIKE '" . $search_term . "'
+               OR c.unique_case_id LIKE '" . $search_term . "'
+               OR cl.name LIKE '" . $search_term . "'
+               OR cp.name LIKE '" . $search_term . "'
+               OR c.cnr_number LIKE '" . $search_term . "')";
+}
+
 // Apply filters
 if (!empty($case_type_filter)) {
     $query .= " AND c.case_type = '" . mysqli_real_escape_string($conn, $case_type_filter) . "'";
@@ -89,6 +104,9 @@ if (!empty($case_type_filter)) {
 if (!empty($status_filter)) {
     $query .= " AND c.status = '" . mysqli_real_escape_string($conn, $status_filter) . "'";
 }
+
+// Add GROUP BY clause
+$query .= " GROUP BY c.id";
 
 // Order by latest position update date if exists, otherwise by filing date (most recent first)
 $query .= " ORDER BY COALESCE(latest.update_date, COALESCE(
@@ -118,8 +136,11 @@ if ($case_types_result) {
     }
 }
 
-// Get case stages/positions
-$stages_query = "SELECT id, stage_name, case_type FROM case_stages ORDER BY case_type, display_order";
+// Get all fee grid items (will be filtered by case_id in JavaScript)
+$stages_query = "SELECT cfg.id, cfg.case_id, cfg.fee_name, cfg.fee_amount, c.case_type
+                 FROM case_fee_grid cfg
+                 JOIN cases c ON cfg.case_id = c.id
+                 ORDER BY cfg.case_id, cfg.fee_name";
 $stages_result = mysqli_query($conn, $stages_query);
 $case_stages = [];
 if ($stages_result) {
@@ -157,109 +178,68 @@ if ($stages_result) {
                 <p class="text-gray-600">View all registered cases ordered by filing date</p>
             </div>
 
-            <!-- Statistics -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-600 text-sm font-medium">Total Cases</p>
-                            <h3 class="text-3xl font-bold text-gray-800 mt-2"><?php echo count($cases); ?></h3>
-                        </div>
-                        <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-briefcase text-blue-500 text-2xl"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-600 text-sm font-medium">Filed This Month</p>
-                            <h3 class="text-3xl font-bold text-gray-800 mt-2">
-                                <?php 
-                                $current_month = date('Y-m');
-                                $month_count = 0;
-                                foreach ($cases as $case) {
-                                    if ($case['filing_date'] && date('Y-m', strtotime($case['filing_date'])) == $current_month) {
-                                        $month_count++;
-                                    }
-                                }
-                                echo $month_count;
-                                ?>
-                            </h3>
-                        </div>
-                        <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-calendar-check text-green-500 text-2xl"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-600 text-sm font-medium">Active Cases</p>
-                            <h3 class="text-3xl font-bold text-gray-800 mt-2">
-                                <?php 
-                                $active_count = 0;
-                                foreach ($cases as $case) {
-                                    if ($case['status'] == 'active') {
-                                        $active_count++;
-                                    }
-                                }
-                                echo $active_count;
-                                ?>
-                            </h3>
-                        </div>
-                        <div class="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-hourglass-half text-yellow-500 text-2xl"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Filter Bar -->
             <div class="bg-white rounded-xl shadow-md p-6 mb-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-filter text-blue-500 mr-2"></i>Filters
+                    <i class="fas fa-filter text-blue-500 mr-2"></i>Filters & Search
                 </h3>
-                <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <!-- Case Type Filter -->
+                <form method="GET" class="space-y-4">
+                    <!-- Search Bar -->
                     <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-2">Case Type</label>
-                        <select name="case_type" onchange="this.form.submit()" 
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">All Case Types</option>
-                            <?php foreach ($case_types as $type): ?>
-                                <option value="<?php echo htmlspecialchars($type); ?>" 
-                                        <?php echo $case_type_filter == $type ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $type))); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <!-- Show Entries Dropdown -->
-                    <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-2">Show Entries</label>
-                        <select id="entriesPerPage" 
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="10">10 entries</option>
-                            <option value="25" selected>25 entries</option>
-                            <option value="50">50 entries</option>
-                            <option value="100">100 entries</option>
-                            <option value="all">Show All</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Clear Filters -->
-                    <?php if (!empty($case_type_filter) || !empty($status_filter)): ?>
-                        <div class="flex items-end">
-                            <a href="cause-list.php" 
-                               class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-center font-medium">
-                                <i class="fas fa-times mr-2"></i>Clear Filters
-                            </a>
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">Search Cases</label>
+                        <div class="flex gap-2">
+                            <div class="flex-1 relative">
+                                <input type="text" name="search" placeholder="Search by loan number, case ID, customer name, party name, or CNR number..."
+                                    value="<?php echo htmlspecialchars($search_query); ?>"
+                                    class="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                            <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition whitespace-nowrap">
+                                <i class="fas fa-search mr-2"></i>Search
+                            </button>
                         </div>
-                    <?php endif; ?>
+                    </div>
+
+                    <!-- Filters Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Case Type Filter -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Case Type</label>
+                            <select name="case_type" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Case Types</option>
+                                <?php foreach ($case_types as $type): ?>
+                                    <option value="<?php echo htmlspecialchars($type); ?>" 
+                                            <?php echo $case_type_filter == $type ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $type))); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <!-- Show Entries Dropdown -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Show Entries</label>
+                            <select id="entriesPerPage" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="10">10 entries</option>
+                                <option value="25" selected>25 entries</option>
+                                <option value="50">50 entries</option>
+                                <option value="100">100 entries</option>
+                                <option value="all">Show All</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Clear Filters -->
+                        <?php if (!empty($search_query) || !empty($case_type_filter) || !empty($status_filter)): ?>
+                            <div class="flex items-end">
+                                <a href="cause-list.php" 
+                                   class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-center font-medium">
+                                    <i class="fas fa-times mr-2"></i>Clear All Filters
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </form>
             </div>
 
@@ -280,22 +260,28 @@ if ($stages_result) {
                                         Case ID
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Fixed Date
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Previous Date
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Customer Name
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Case Type
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Case No
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Court Name
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Customer Name
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Accused/Opposite Party
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        CNR Number
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Fixed Date
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Case Type
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Latest Stage
@@ -319,6 +305,55 @@ if ($stages_result) {
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm text-gray-900 font-semibold">
                                                 <?php 
+                                                // Show previous position date if exists, otherwise show filing date
+                                                $prev_date = $case['previous_position_date'] ?: $case['filing_date'];
+                                                if ($prev_date) {
+                                                    echo date('d M, Y', strtotime($prev_date));
+                                                    if ($case['previous_position_date']) {
+                                                        echo '<br><span class="text-xs text-gray-500"><i class="fas fa-history mr-1"></i>Previous</span>';
+                                                    } else {
+                                                        echo '<br><span class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i>Filed</span>';
+                                                    }
+                                                } else {
+                                                    echo '<span class="text-gray-400">N/A</span>';
+                                                }
+                                                ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm text-gray-900">
+                                                <?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm text-gray-700">
+                                                <?php echo htmlspecialchars($case['court_name'] ?? 'N/A'); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm text-gray-900">
+                                                <?php echo htmlspecialchars($case['customer_name'] ?? 'N/A'); ?>
+                                            </span>
+                                            <?php if ($case['mobile']): ?>
+                                                <br>
+                                                <span class="text-xs text-gray-500">
+                                                    <i class="fas fa-phone mr-1"></i><?php echo htmlspecialchars($case['mobile']); ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm text-gray-900">
+                                                <?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900 font-semibold">
+                                                <?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900 font-semibold">
+                                                <?php 
                                                 $display_date = $case['latest_position_date'] ?: $case['filing_date'];
                                                 if ($display_date) {
                                                     echo date('d M, Y', strtotime($display_date));
@@ -334,41 +369,8 @@ if ($stages_result) {
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="text-sm text-gray-900 font-semibold">
-                                                <?php 
-                                                if ($case['previous_position_date']) {
-                                                    echo date('d M, Y', strtotime($case['previous_position_date']));
-                                                    echo '<br><span class="text-xs text-gray-500"><i class="fas fa-history mr-1"></i>Previous</span>';
-                                                } else {
-                                                    echo '<span class="text-gray-400">No Previous</span>';
-                                                }
-                                                ?>
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-sm text-gray-900">
-                                                <?php echo htmlspecialchars($case['customer_name'] ?? 'N/A'); ?>
-                                            </span>
-                                            <?php if ($case['mobile']): ?>
-                                                <br>
-                                                <span class="text-xs text-gray-500">
-                                                    <i class="fas fa-phone mr-1"></i><?php echo htmlspecialchars($case['mobile']); ?>
-                                                </span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="inline-flex px-3 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                                                 <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $case['case_type']))); ?>
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-sm text-gray-900">
-                                                <?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?>
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-sm text-gray-700">
-                                                <?php echo htmlspecialchars($case['court_name'] ?? 'N/A'); ?>
                                             </span>
                                         </td>
                                         <td class="px-6 py-4">
@@ -476,20 +478,16 @@ if ($stages_result) {
                 </div>
                 
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Position/Stage <span class="text-red-500">*</span></label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Stage <span class="text-red-500">*</span></label>
                     <select id="position" name="position" required 
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select Position</option>
-                        <?php foreach ($case_stages as $stage): ?>
-                            <option value="<?php echo htmlspecialchars($stage['stage_name']); ?>" 
-                                    data-case-type="<?php echo htmlspecialchars($stage['case_type'] ?? ''); ?>">
-                                <?php echo htmlspecialchars($stage['stage_name']); ?>
-                                <?php if ($stage['case_type']): ?>
-                                    (<?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $stage['case_type']))); ?>)
-                                <?php endif; ?>
-                            </option>
-                        <?php endforeach; ?>
+                        <option value="">Select Stage</option>
                     </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Fee Amount</label>
+                    <input type="text" id="feeAmount" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
                 </div>
                 
                 <div class="mb-6">
@@ -519,18 +517,21 @@ if ($stages_result) {
 
     <script src="./assets/script.js"></script>
     <script>
-        let currentCaseType = '';
+        // Store all fee data
+        const allFeeData = <?php echo json_encode($case_stages); ?>;
+        let currentCaseId = '';
         
         function openUpdateModal(caseId, caseIdDisplay, caseType) {
-            currentCaseType = caseType;
+            currentCaseId = caseId;
             document.getElementById('caseId').value = caseId;
             document.getElementById('caseIdDisplay').value = caseIdDisplay;
             document.getElementById('updateDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('position').value = '';
+            document.getElementById('feeAmount').value = '';
             document.getElementById('remarks').value = '';
             
-            // Filter positions based on case type
-            filterPositionsByCaseType();
+            // Load fees for this specific case
+            loadFeesForCase(caseId);
             
             document.getElementById('updateModal').classList.remove('hidden');
         }
@@ -539,35 +540,44 @@ if ($stages_result) {
             document.getElementById('updateModal').classList.add('hidden');
         }
         
-        function filterPositionsByCaseType() {
+        function loadFeesForCase(caseId) {
             const positionSelect = document.getElementById('position');
-            const options = positionSelect.getElementsByTagName('option');
+            positionSelect.innerHTML = '<option value="">Select Stage</option>';
             
-            for (let i = 0; i < options.length; i++) {
-                const option = options[i];
-                const optionCaseType = option.getAttribute('data-case-type');
-                
-                if (option.value === '') {
-                    option.style.display = '';
-                    continue;
-                }
-                
-                if (optionCaseType === '' || optionCaseType === null || optionCaseType === currentCaseType) {
-                    option.style.display = '';
-                } else {
-                    option.style.display = 'none';
-                }
-            }
+            // Filter fees for this specific case
+            const caseFees = allFeeData.filter(fee => fee.case_id == caseId);
+            
+            caseFees.forEach(fee => {
+                const option = document.createElement('option');
+                option.value = fee.fee_name;
+                option.setAttribute('data-fee-id', fee.id);
+                option.setAttribute('data-fee-amount', fee.fee_amount);
+                option.textContent = `${fee.fee_name} (₹${parseFloat(fee.fee_amount).toFixed(2)})`;
+                positionSelect.appendChild(option);
+            });
+            
+            // Add change event listener
+            positionSelect.addEventListener('change', function() {
+                updateFeeAmount();
+            });
+        }
+        
+        function updateFeeAmount() {
+            const positionSelect = document.getElementById('position');
+            const selectedOption = positionSelect.options[positionSelect.selectedIndex];
+            const feeAmount = selectedOption.getAttribute('data-fee-amount') || '0';
+            document.getElementById('feeAmount').value = '₹' + parseFloat(feeAmount).toFixed(2);
         }
         
         function submitUpdate(isEndCase) {
             const caseId = document.getElementById('caseId').value;
             const updateDate = document.getElementById('updateDate').value;
             const position = document.getElementById('position').value;
+            const feeAmount = document.getElementById('feeAmount').value.replace('₹', '').trim();
             const remarks = document.getElementById('remarks').value;
             
             if (!updateDate || !position) {
-                alert('Please fill in all required fields (Date and Position)');
+                alert('Please fill in all required fields (Date and Stage)');
                 return;
             }
             
@@ -576,6 +586,8 @@ if ($stages_result) {
             formData.append('case_id', caseId);
             formData.append('update_date', updateDate);
             formData.append('position', position);
+            formData.append('fee_amount', feeAmount);
+            formData.append('payment_status', 'pending');
             formData.append('remarks', remarks);
             formData.append('is_end', isEndCase ? '1' : '0');
             

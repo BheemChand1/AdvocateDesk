@@ -63,7 +63,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $fee_grid[] = $row;
 }
 
-// Fetch case position updates
+// Fetch case position updates (includes all account/billing info now)
 $query = "SELECT * FROM case_position_updates WHERE case_id = ? ORDER BY update_date DESC, created_at DESC";
 $stmt = mysqli_prepare($conn, $query);
 mysqli_stmt_bind_param($stmt, "i", $case_id);
@@ -72,19 +72,6 @@ $result = mysqli_stmt_get_result($stmt);
 $position_updates = [];
 while ($row = mysqli_fetch_assoc($result)) {
     $position_updates[] = $row;
-}
-
-// Fetch case accounts
-$query = "SELECT ca.* FROM case_accounts ca
-          WHERE ca.case_id = ?
-          ORDER BY ca.bill_date DESC, ca.created_at DESC";
-$stmt = mysqli_prepare($conn, $query);
-mysqli_stmt_bind_param($stmt, "i", $case_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$case_accounts = [];
-while ($row = mysqli_fetch_assoc($result)) {
-    $case_accounts[] = $row;
 }
 ?>
 <!DOCTYPE html>
@@ -431,7 +418,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                     <h2 class="text-2xl font-bold text-gray-800">
                         <i class="fas fa-history text-blue-500 mr-2"></i>Case Position Updates & Stages
                     </h2>
-                    <p class="text-gray-600 text-sm mt-1">Timeline of all case position updates</p>
+                    <p class="text-gray-600 text-sm mt-1">Timeline of all case position updates with fees and billing information</p>
                 </div>
 
                 <?php if (!empty($position_updates)): ?>
@@ -452,7 +439,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                                     
                                     <!-- Update card -->
                                     <div class="flex-1 bg-gray-50 rounded-lg p-4 shadow-sm border <?php echo $update['is_end_position'] ? 'border-red-300' : 'border-gray-200'; ?>">
-                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                                             <h3 class="text-lg font-bold <?php echo $update['is_end_position'] ? 'text-red-600' : 'text-gray-800'; ?>">
                                                 <?php echo htmlspecialchars($update['position']); ?>
                                                 <?php if ($update['is_end_position']): ?>
@@ -463,6 +450,43 @@ while ($row = mysqli_fetch_assoc($result)) {
                                                 <i class="fas fa-calendar mr-1"></i>
                                                 <?php echo date('d M, Y', strtotime($update['update_date'])); ?>
                                             </span>
+                                        </div>
+
+                                        <!-- Fee and Billing Information -->
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 bg-white p-3 rounded border border-gray-200">
+                                            <div>
+                                                <p class="text-xs text-gray-600 font-semibold">Fee Amount</p>
+                                                <p class="text-sm font-bold text-green-600">₹<?php echo number_format($update['fee_amount'] ?? 0, 2); ?></p>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs text-gray-600 font-semibold">Payment Status</p>
+                                                <span class="px-2 py-1 rounded-full text-xs font-semibold inline-block <?php 
+                                                    $status = strtolower($update['payment_status'] ?? 'pending');
+                                                    echo $status == 'completed' ? 'bg-green-100 text-green-800' : 
+                                                         ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                                         ($status == 'processing' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'));
+                                                ?>">
+                                                    <?php echo htmlspecialchars(ucfirst($status)); ?>
+                                                </span>
+                                            </div>
+                                            <?php if ($update['bill_number']): ?>
+                                            <div>
+                                                <p class="text-xs text-gray-600 font-semibold">Bill Number</p>
+                                                <p class="text-sm font-mono text-blue-600"><?php echo htmlspecialchars($update['bill_number']); ?></p>
+                                            </div>
+                                            <?php endif; ?>
+                                            <?php if ($update['bill_date']): ?>
+                                            <div>
+                                                <p class="text-xs text-gray-600 font-semibold">Bill Date</p>
+                                                <p class="text-sm text-gray-700"><?php echo date('d M, Y', strtotime($update['bill_date'])); ?></p>
+                                            </div>
+                                            <?php endif; ?>
+                                            <?php if ($update['completed_date']): ?>
+                                            <div>
+                                                <p class="text-xs text-gray-600 font-semibold">Completed Date</p>
+                                                <p class="text-sm text-gray-700"><?php echo date('d M, Y', strtotime($update['completed_date'])); ?></p>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
                                         
                                         <?php if (!empty($update['remarks'])): ?>
@@ -491,35 +515,67 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <?php endif; ?>
             </div>
 
-            <!-- Case Accounts Section -->
+            <!-- Case Accounts Section (Summary of Fee Tracking) -->
             <div class="bg-white rounded-xl shadow-md p-6 mb-6">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b-2 border-blue-200">
-                    <i class="fas fa-file-invoice-dollar text-blue-500 mr-3"></i>Case Accounts
+                    <i class="fas fa-file-invoice-dollar text-blue-500 mr-3"></i>Fee Summary
                 </h2>
                 
-                <?php if (!empty($case_accounts)): ?>
+                <?php 
+                // Get summary of fees by payment status
+                $fee_summary = [
+                    'pending' => 0,
+                    'processing' => 0,
+                    'completed' => 0
+                ];
+                foreach ($position_updates as $update) {
+                    $status = strtolower($update['payment_status'] ?? 'pending');
+                    if (isset($fee_summary[$status])) {
+                        $fee_summary[$status] += $update['fee_amount'] ?? 0;
+                    }
+                }
+                ?>
+                
+                <?php if (!empty($position_updates)): ?>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Pending Fees</p>
+                            <p class="text-2xl font-bold text-yellow-600">₹<?php echo number_format($fee_summary['pending'], 2); ?></p>
+                        </div>
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Processing Fees</p>
+                            <p class="text-2xl font-bold text-blue-600">₹<?php echo number_format($fee_summary['processing'], 2); ?></p>
+                        </div>
+                        <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded">
+                            <p class="text-xs text-gray-600 font-semibold uppercase">Completed Fees</p>
+                            <p class="text-2xl font-bold text-green-600">₹<?php echo number_format($fee_summary['completed'], 2); ?></p>
+                        </div>
+                    </div>
+
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead>
                                 <tr class="bg-blue-50 border-b-2 border-blue-200">
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Stage</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fee Amount</th>
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Number</th>
-                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Date</th>
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Payment Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <?php foreach ($case_accounts as $account): ?>
+                                <?php foreach ($position_updates as $update): ?>
                                 <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-4 py-3 text-sm font-mono text-blue-600 font-semibold"><?php echo htmlspecialchars($account['bill_number'] ?? 'N/A'); ?></td>
-                                    <td class="px-4 py-3 text-sm text-gray-700"><?php echo $account['bill_date'] ? date('d M, Y', strtotime($account['bill_date'])) : 'N/A'; ?></td>
+                                    <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($update['position'] ?? 'N/A'); ?></td>
+                                    <td class="px-4 py-3 text-sm font-bold text-green-600">₹<?php echo number_format($update['fee_amount'] ?? 0, 2); ?></td>
+                                    <td class="px-4 py-3 text-sm font-mono text-blue-600"><?php echo htmlspecialchars($update['bill_number'] ?? 'N/A'); ?></td>
                                     <td class="px-4 py-3 text-sm">
                                         <span class="px-3 py-1 rounded-full text-xs font-semibold <?php 
-                                            $status = strtolower($account['payment_status'] ?? 'pending');
+                                            $status = strtolower($update['payment_status'] ?? 'pending');
                                             echo $status == 'completed' ? 'bg-green-100 text-green-800' : 
                                                  ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
                                                  ($status == 'processing' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'));
                                         ?>">
-                                            <?php echo htmlspecialchars(ucfirst($account['payment_status'] ?? 'pending')); ?>
+                                            <?php echo htmlspecialchars(ucfirst($status)); ?>
                                         </span>
                                     </td>
                                 </tr>
@@ -532,10 +588,11 @@ while ($row = mysqli_fetch_assoc($result)) {
                         <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-inbox text-gray-400 text-3xl"></i>
                         </div>
-                        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Accounts</h3>
-                        <p class="text-gray-600">No case accounts have been recorded yet.</p>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">No Fees Recorded</h3>
+                        <p class="text-gray-600">No case fees have been recorded yet.</p>
                     </div>
                 <?php endif; ?>
+            </div>
             </div>
 
             <!-- Action Buttons -->

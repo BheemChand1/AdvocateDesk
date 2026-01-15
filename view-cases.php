@@ -192,6 +192,11 @@ if ($result) {
                                         <a href="case-details.php?id=<?php echo $case['id']; ?>" class="text-blue-600 hover:text-blue-800 transition" title="View Details">
                                             <i class="fas fa-eye text-lg"></i>
                                         </a>
+                                        <?php if ($case['status'] !== 'closed'): ?>
+                                        <button onclick="closeCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="text-orange-600 hover:text-orange-800 transition" title="Close Case">
+                                            <i class="fas fa-times-circle text-lg"></i>
+                                        </button>
+                                        <?php endif; ?>
                                         <button onclick="deleteCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="text-red-600 hover:text-red-800 transition" title="Delete">
                                             <i class="fas fa-trash text-lg"></i>
                                         </button>
@@ -250,6 +255,11 @@ if ($result) {
                             <a href="case-details.php?id=<?php echo $case['id']; ?>" class="flex items-center px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
                                 <i class="fas fa-eye mr-2"></i>View
                             </a>
+                            <?php if ($case['status'] !== 'closed'): ?>
+                            <button onclick="closeCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="flex items-center px-3 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition">
+                                <i class="fas fa-times-circle mr-2"></i>Close
+                            </button>
+                            <?php endif; ?>
                             <button onclick="deleteCase(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>')" class="flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition">
                                 <i class="fas fa-trash mr-2"></i>Delete
                             </button>
@@ -280,6 +290,33 @@ if ($result) {
 
     <script src="./assets/script.js"></script>
     <script>
+        function closeCase(caseId, caseIdDisplay) {
+            if (!confirm(`Are you sure you want to close case ${caseIdDisplay}? This action will mark the case as closed.`)) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('case_id', caseId);
+
+            fetch('close-case.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Case closed successfully');
+                    location.reload();
+                } else {
+                    alert('Error closing case: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while closing the case');
+            });
+        }
+
         function deleteCase(caseId, caseIdDisplay) {
             if (!confirm(`Are you sure you want to delete case ${caseIdDisplay}? This action cannot be undone.`)) {
                 return;

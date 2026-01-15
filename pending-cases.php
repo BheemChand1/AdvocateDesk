@@ -9,7 +9,18 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true)
 
 require_once 'includes/connection.php';
 
-// Create case_accounts table if it doesn't exist
+// Ensure case_position_updates has bill columns
+$check_bill_column = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                       WHERE TABLE_NAME='case_position_updates' AND COLUMN_NAME='bill_number'";
+$result = mysqli_query($conn, $check_bill_column);
+
+if (mysqli_num_rows($result) === 0) {
+    // Add bill columns if they don't exist
+    mysqli_query($conn, "ALTER TABLE case_position_updates ADD COLUMN bill_number VARCHAR(100)");
+    mysqli_query($conn, "ALTER TABLE case_position_updates ADD COLUMN bill_date DATE");
+}
+
+// Create case_accounts table if it doesn't exist (for backward compatibility)
 $create_table_sql = "
 CREATE TABLE IF NOT EXISTS case_accounts (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -35,65 +46,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $case_id = mysqli_real_escape_string($conn, $_POST['case_id']);
         $bill_number = mysqli_real_escape_string($conn, $_POST['bill_number']);
         $bill_date = mysqli_real_escape_string($conn, $_POST['bill_date']);
+        $update_id = mysqli_real_escape_string($conn, $_POST['update_id']);
 
-        // Check if account already exists
-        $check_sql = "SELECT id FROM case_accounts WHERE case_id = $case_id";
-        $check_result = mysqli_query($conn, $check_sql);
-
-        if (mysqli_num_rows($check_result) > 0) {
-            // Update existing record
-            $update_sql = "UPDATE case_accounts SET bill_number = '$bill_number', bill_date = '$bill_date', payment_status = 'processing' WHERE case_id = $case_id";
-            if (mysqli_query($conn, $update_sql)) {
-                $message = "Bill details added and status changed to Processing!";
-                $message_type = "success";
-            } else {
-                $message = "Error updating bill details: " . mysqli_error($conn);
-                $message_type = "error";
-            }
+        // Update the case_position_updates record with bill details and change status to processing
+        $update_sql = "UPDATE case_position_updates 
+                       SET bill_number = '$bill_number', bill_date = '$bill_date', payment_status = 'processing' 
+                       WHERE id = $update_id";
+        
+        if (mysqli_query($conn, $update_sql)) {
+            $message = "Bill details added and status changed to Processing!";
+            $message_type = "success";
         } else {
-            // Insert new record
-            $insert_sql = "INSERT INTO case_accounts (case_id, bill_number, bill_date, payment_status) VALUES ($case_id, '$bill_number', '$bill_date', 'processing')";
-            if (mysqli_query($conn, $insert_sql)) {
-                $message = "Bill details added and status changed to Processing!";
-                $message_type = "success";
-            } else {
-                $message = "Error adding bill details: " . mysqli_error($conn);
-                $message_type = "error";
-            }
+            $message = "Error updating bill details: " . mysqli_error($conn);
+            $message_type = "error";
         }
     }
 }
 
-// Fetch pending cases not in case_accounts
+// Fetch pending cases with pending payment status from case_position_updates
 $pending_cases_sql = "
-SELECT DISTINCT
+SELECT 
     c.id,
     c.unique_case_id,
     c.case_type,
     cl.name as client_name,
-    COALESCE(SUM(cfg.fee_amount), 0) as total_fee_amount
+    cpu.fee_amount,
+    cpu.position as fee_name,
+    cpu.payment_status,
+    cpu.id as update_id,
+    cpu.update_date,
+    cpu.bill_number,
+    cpu.bill_date
 FROM cases c
 JOIN clients cl ON c.client_id = cl.client_id
-LEFT JOIN case_accounts ca ON c.id = ca.case_id
-LEFT JOIN case_fee_grid cfg ON c.id = cfg.case_id
-WHERE ca.id IS NULL
-GROUP BY c.id, c.unique_case_id, c.case_type, cl.name
-ORDER BY c.created_at DESC
+LEFT JOIN case_position_updates cpu ON c.id = cpu.case_id AND cpu.payment_status = 'pending'
+WHERE cpu.id IS NOT NULL
+ORDER BY c.created_at DESC, cpu.update_date DESC, cpu.position
 ";
 
 $pending_cases_result = mysqli_query($conn, $pending_cases_sql);
 $pending_cases = [];
 while ($row = mysqli_fetch_assoc($pending_cases_result)) {
-    $exists = false;
-    foreach ($pending_cases as $pc) {
-        if ($pc['id'] === $row['id']) {
-            $exists = true;
-            break;
-        }
-    }
-    if (!$exists) {
-        $pending_cases[] = $row;
-    }
+    $pending_cases[] = $row;
 }
 
 ?>
@@ -128,9 +122,6 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
 
                 <!-- Navigation Buttons -->
                 <div class="mb-6 flex gap-3 flex-wrap">
-                    <a href="case-accounts.php" class="px-6 py-2 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition">
-                        <i class="fas fa-home mr-2"></i>Dashboard
-                    </a>
                     <a href="pending-cases.php" class="px-6 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 transition">
                         <i class="fas fa-hourglass-half mr-2"></i>Pending Cases
                     </a>
@@ -191,11 +182,12 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                         <td class="px-4 py-3 text-sm text-gray-700 font-medium"><?php echo htmlspecialchars($case['unique_case_id']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['client_name']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['case_type']); ?></td>
-                                        <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-blue-600">₹<?php echo number_format($case['total_fee_amount'], 2); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-blue-600">₹<?php echo number_format($case['fee_amount'], 2); ?></td>
                                         <td class="px-4 py-3">
                                             <form method="POST" class="flex gap-2 items-center">
                                                 <input type="hidden" name="action" value="add_bill">
                                                 <input type="hidden" name="case_id" value="<?php echo $case['id']; ?>">
+                                                <input type="hidden" name="update_id" value="<?php echo $case['update_id']; ?>">
                                                 <input type="text" name="bill_number" placeholder="Bill No." class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-yellow-500" required>
                                         </td>
                                         <td class="px-4 py-3">

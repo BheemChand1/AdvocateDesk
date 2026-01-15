@@ -70,10 +70,9 @@ $stats['case_types'] = $row['count'] ?? 0;
 
 // Get account pending count
 $pending_accounts_sql = "
-SELECT COUNT(DISTINCT c.id) as total
-FROM cases c
-LEFT JOIN case_accounts ca ON c.id = ca.case_id
-WHERE ca.id IS NULL
+SELECT COUNT(*) as total
+FROM case_position_updates
+WHERE payment_status = 'pending'
 ";
 $pending_result = mysqli_query($conn, $pending_accounts_sql);
 $stats['account_pending'] = mysqli_fetch_assoc($pending_result)['total'] ?? 0;
@@ -81,7 +80,7 @@ $stats['account_pending'] = mysqli_fetch_assoc($pending_result)['total'] ?? 0;
 // Get account processing count
 $processing_accounts_sql = "
 SELECT COUNT(*) as total
-FROM case_accounts
+FROM case_position_updates
 WHERE payment_status = 'processing'
 ";
 $processing_result = mysqli_query($conn, $processing_accounts_sql);
