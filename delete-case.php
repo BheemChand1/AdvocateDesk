@@ -48,15 +48,7 @@ try {
         throw new Exception("Failed to delete case fees");
     }
     
-    // Delete from case_stages (position history)
-    $delete_stages = "DELETE FROM case_stages WHERE case_id = ?";
-    $stages_stmt = mysqli_prepare($conn, $delete_stages);
-    mysqli_stmt_bind_param($stages_stmt, "i", $case_id);
-    if (!mysqli_stmt_execute($stages_stmt)) {
-        throw new Exception("Failed to delete case stages");
-    }
-    
-    // Delete from case_position_updates (if exists)
+    // Delete from case_position_updates (position history)
     $delete_positions = "DELETE FROM case_position_updates WHERE case_id = ?";
     $positions_stmt = mysqli_prepare($conn, $delete_positions);
     mysqli_stmt_bind_param($positions_stmt, "i", $case_id);

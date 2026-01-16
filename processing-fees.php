@@ -81,14 +81,32 @@ SELECT
     cpu.completed_date,
     c.unique_case_id,
     c.case_type,
+    c.cnr_number,
+    COALESCE(
+        ni.case_no,
+        cr.case_no,
+        cc.case_no,
+        ep.case_no,
+        ao.case_no
+    ) as case_no,
     cl.name as client_name,
+    GROUP_CONCAT(DISTINCT CASE 
+        WHEN cp.party_type IN ('accused', 'defendant') THEN cp.name 
+    END SEPARATOR ', ') as accused_opposite_party,
     cpu.fee_amount,
     cpu.position as fee_name,
     cpu.update_date
 FROM case_position_updates cpu
 JOIN cases c ON cpu.case_id = c.id
 JOIN clients cl ON c.client_id = cl.client_id
-WHERE cpu.payment_status = 'processing'
+LEFT JOIN case_ni_passa_details ni ON c.id = ni.case_id
+LEFT JOIN case_criminal_details cr ON c.id = cr.case_id
+LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
+LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
+LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
+LEFT JOIN case_parties cp ON c.id = cp.case_id
+WHERE cpu.payment_status = 'processing' AND cpu.fee_amount > 0
+GROUP BY cpu.id
 ORDER BY cpu.update_date DESC
 ";
 
@@ -176,7 +194,10 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
                                 <thead>
                                     <tr class="bg-gray-100 border-b-2 border-gray-300">
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case ID</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case No.</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">CNR No.</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Client Name</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Accused/Opposite Party</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case Type</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Number</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Date</th>
@@ -189,7 +210,10 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
                                     <?php foreach ($processing_accounts as $account): ?>
                                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                                         <td class="px-4 py-3 text-sm text-gray-700 font-medium"><?php echo htmlspecialchars($account['unique_case_id']); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['case_no'] ?? 'N/A'); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['cnr_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['client_name']); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['accused_opposite_party'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['case_type']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['bill_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['bill_date'] ?? 'N/A'); ?></td>

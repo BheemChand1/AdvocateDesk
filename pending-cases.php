@@ -69,7 +69,18 @@ SELECT
     c.id,
     c.unique_case_id,
     c.case_type,
+    c.cnr_number,
+    COALESCE(
+        ni.case_no,
+        cr.case_no,
+        cc.case_no,
+        ep.case_no,
+        ao.case_no
+    ) as case_no,
     cl.name as client_name,
+    GROUP_CONCAT(DISTINCT CASE 
+        WHEN cp.party_type IN ('accused', 'defendant') THEN cp.name 
+    END SEPARATOR ', ') as accused_opposite_party,
     cpu.fee_amount,
     cpu.position as fee_name,
     cpu.payment_status,
@@ -79,8 +90,15 @@ SELECT
     cpu.bill_date
 FROM cases c
 JOIN clients cl ON c.client_id = cl.client_id
+LEFT JOIN case_ni_passa_details ni ON c.id = ni.case_id
+LEFT JOIN case_criminal_details cr ON c.id = cr.case_id
+LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
+LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
+LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
+LEFT JOIN case_parties cp ON c.id = cp.case_id
 LEFT JOIN case_position_updates cpu ON c.id = cpu.case_id AND cpu.payment_status = 'pending'
-WHERE cpu.id IS NOT NULL
+WHERE cpu.id IS NOT NULL AND cpu.fee_amount > 0
+GROUP BY c.id, cpu.id
 ORDER BY c.created_at DESC, cpu.update_date DESC, cpu.position
 ";
 
@@ -168,7 +186,10 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                 <thead>
                                     <tr class="bg-gray-100 border-b-2 border-gray-300">
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case ID</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case No.</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">CNR No.</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Client Name</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Accused/Opposite Party</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case Type</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fee Amount</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Number</th>
@@ -180,7 +201,10 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                     <?php foreach ($pending_cases as $case): ?>
                                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                                         <td class="px-4 py-3 text-sm text-gray-700 font-medium"><?php echo htmlspecialchars($case['unique_case_id']); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['client_name']); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['case_type']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-blue-600">₹<?php echo number_format($case['fee_amount'], 2); ?></td>
                                         <td class="px-4 py-3">
