@@ -72,7 +72,7 @@ $stats['case_types'] = $row['count'] ?? 0;
 $pending_accounts_sql = "
 SELECT COUNT(*) as total
 FROM case_position_updates
-WHERE payment_status = 'pending'
+WHERE payment_status = 'pending' AND fee_amount > 0
 ";
 $pending_result = mysqli_query($conn, $pending_accounts_sql);
 $stats['account_pending'] = mysqli_fetch_assoc($pending_result)['total'] ?? 0;
@@ -81,7 +81,7 @@ $stats['account_pending'] = mysqli_fetch_assoc($pending_result)['total'] ?? 0;
 $processing_accounts_sql = "
 SELECT COUNT(*) as total
 FROM case_position_updates
-WHERE payment_status = 'processing'
+WHERE payment_status = 'processing' AND fee_amount > 0
 ";
 $processing_result = mysqli_query($conn, $processing_accounts_sql);
 $stats['account_processing'] = mysqli_fetch_assoc($processing_result)['total'] ?? 0;
