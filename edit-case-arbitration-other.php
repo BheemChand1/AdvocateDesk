@@ -62,6 +62,17 @@ while ($row = mysqli_fetch_assoc($result)) {
     $case_fees[] = $row;
 }
 
+// Fetch case parties
+$parties_query = "SELECT * FROM case_parties WHERE case_id = ? ORDER BY is_primary DESC, id ASC";
+$stmt = mysqli_prepare($conn, $parties_query);
+mysqli_stmt_bind_param($stmt, "i", $case_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$case_parties = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $case_parties[] = $row;
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Update main cases table
@@ -118,6 +129,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (mysqli_query($conn, $details_sql)) {
+            // Update case parties
+            $has_parties = !empty($_POST['plaintiff_name']) || !empty($_POST['defendant_name']) ||
+                          !empty($_POST['additional_plaintiff_name']) || !empty($_POST['additional_defendant_name']);
+            
+            if ($has_parties) {
+                // Delete existing parties if updating
+                mysqli_query($conn, "DELETE FROM case_parties WHERE case_id = $case_id");
+                
+                // Insert plaintiff primary party
+                if (!empty($_POST['plaintiff_name'])) {
+                    $party_name = mysqli_real_escape_string($conn, $_POST['plaintiff_name']);
+                    $party_address = mysqli_real_escape_string($conn, $_POST['plaintiff_address'] ?? '');
+                    
+                    $stmt = mysqli_prepare($conn, "INSERT INTO case_parties (case_id, party_type, name, address, is_primary) VALUES (?, ?, ?, ?, ?)");
+                    $party_type = 'plaintiff';
+                    $is_primary = 1;
+                    mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $party_name, $party_address, $is_primary);
+                    mysqli_stmt_execute($stmt);
+                    mysqli_stmt_close($stmt);
+                }
+                
+                // Insert defendant primary party
+                if (!empty($_POST['defendant_name'])) {
+                    $party_name = mysqli_real_escape_string($conn, $_POST['defendant_name']);
+                    $party_address = mysqli_real_escape_string($conn, $_POST['defendant_address'] ?? '');
+                    
+                    $stmt = mysqli_prepare($conn, "INSERT INTO case_parties (case_id, party_type, name, address, is_primary) VALUES (?, ?, ?, ?, ?)");
+                    $party_type = 'defendant';
+                    $is_primary = 1;
+                    mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $party_name, $party_address, $is_primary);
+                    mysqli_stmt_execute($stmt);
+                    mysqli_stmt_close($stmt);
+                }
+                
+                // Insert additional plaintiffs
+                if (!empty($_POST['additional_plaintiff_name']) && is_array($_POST['additional_plaintiff_name'])) {
+                    $plaintiff_names = $_POST['additional_plaintiff_name'];
+                    $plaintiff_addresses = $_POST['additional_plaintiff_address'] ?? [];
+                    
+                    for ($i = 0; $i < count($plaintiff_names); $i++) {
+                        if (!empty($plaintiff_names[$i])) {
+                            $party_name = mysqli_real_escape_string($conn, $plaintiff_names[$i]);
+                            $party_address = mysqli_real_escape_string($conn, $plaintiff_addresses[$i] ?? '');
+                            
+                            $stmt = mysqli_prepare($conn, "INSERT INTO case_parties (case_id, party_type, name, address, is_primary) VALUES (?, ?, ?, ?, ?)");
+                            $party_type = 'plaintiff';
+                            $is_primary = 0;
+                            mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $party_name, $party_address, $is_primary);
+                            mysqli_stmt_execute($stmt);
+                            mysqli_stmt_close($stmt);
+                        }
+                    }
+                }
+                
+                // Insert additional defendants
+                if (!empty($_POST['additional_defendant_name']) && is_array($_POST['additional_defendant_name'])) {
+                    $defendant_names = $_POST['additional_defendant_name'];
+                    $defendant_addresses = $_POST['additional_defendant_address'] ?? [];
+                    
+                    for ($i = 0; $i < count($defendant_names); $i++) {
+                        if (!empty($defendant_names[$i])) {
+                            $party_name = mysqli_real_escape_string($conn, $defendant_names[$i]);
+                            $party_address = mysqli_real_escape_string($conn, $defendant_addresses[$i] ?? '');
+                            
+                            $stmt = mysqli_prepare($conn, "INSERT INTO case_parties (case_id, party_type, name, address, is_primary) VALUES (?, ?, ?, ?, ?)");
+                            $party_type = 'defendant';
+                            $is_primary = 0;
+                            mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $party_name, $party_address, $is_primary);
+                            mysqli_stmt_execute($stmt);
+                            mysqli_stmt_close($stmt);
+                        }
+                    }
+                }
+            }
+            
             // Update fee grid
             mysqli_query($conn, "DELETE FROM case_fee_grid WHERE case_id = $case_id");
             
@@ -273,34 +359,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
 
-                    <!-- Plaintiff Information -->
+                    <!-- Plaintiff and Defendant Information with Party Management -->
+                    <?php
+                    $primary_plaintiff = null;
+                    $additional_plaintiffs = [];
+                    $primary_defendant = null;
+                    $additional_defendants = [];
+                    
+                    foreach ($case_parties as $party) {
+                        if ($party['party_type'] === 'plaintiff') {
+                            if ($party['is_primary']) {
+                                $primary_plaintiff = $party;
+                            } else {
+                                $additional_plaintiffs[] = $party;
+                            }
+                        } elseif ($party['party_type'] === 'defendant') {
+                            if ($party['is_primary']) {
+                                $primary_defendant = $party;
+                            } else {
+                                $additional_defendants[] = $party;
+                            }
+                        }
+                    }
+                    ?>
                     <div class="mb-6 bg-blue-50 border border-blue-300 rounded-lg p-4">
                         <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-user text-blue-500 mr-2"></i>Plaintiff Information</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Plaintiff Name</label>
-                                <input type="text" name="plaintiff_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($case_details['plaintiff_name'] ?? ''); ?>">
+                                <input type="text" name="plaintiff_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($primary_plaintiff['name'] ?? ''); ?>">
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Plaintiff Address</label>
-                                <input type="text" name="plaintiff_address" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($case_details['plaintiff_address'] ?? ''); ?>">
+                                <input type="text" name="plaintiff_address" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($primary_plaintiff['address'] ?? ''); ?>">
                             </div>
                         </div>
+                        
+                        <!-- Additional Plaintiffs -->
+                        <div id="additionalPlaintiffs" class="mt-4">
+                            <?php foreach ($additional_plaintiffs as $plaintiff): ?>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-3 bg-white rounded border border-blue-200">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Plaintiff Name</label>
+                                    <input type="text" name="additional_plaintiff_name[]" value="<?php echo htmlspecialchars($plaintiff['name']); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter plaintiff name">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Plaintiff Address</label>
+                                    <input type="text" name="additional_plaintiff_address[]" value="<?php echo htmlspecialchars($plaintiff['address']); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter plaintiff address">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <button type="button" class="remove-plaintiff px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                                        <i class="fas fa-trash mr-2"></i>Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <button type="button" id="addMorePlaintiff" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-plus mr-2"></i>Add More Plaintiff
+                        </button>
                     </div>
 
-                    <!-- Defendant Information -->
                     <div class="mb-6 bg-blue-50 border border-blue-300 rounded-lg p-4">
                         <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-user-injured text-blue-500 mr-2"></i>Defendant Information</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant Name</label>
-                                <input type="text" name="defendant_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($case_details['defendant_name'] ?? ''); ?>">
+                                <input type="text" name="defendant_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($primary_defendant['name'] ?? ''); ?>">
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant Address</label>
-                                <input type="text" name="defendant_address" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($case_details['defendant_address'] ?? ''); ?>">
+                                <input type="text" name="defendant_address" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($primary_defendant['address'] ?? ''); ?>">
                             </div>
                         </div>
+                        
+                        <!-- Additional Defendants -->
+                        <div id="additionalDefendants" class="mt-4">
+                            <?php foreach ($additional_defendants as $defendant): ?>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-3 bg-white rounded border border-blue-200">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant Name</label>
+                                    <input type="text" name="additional_defendant_name[]" value="<?php echo htmlspecialchars($defendant['name']); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter defendant name">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant Address</label>
+                                    <input type="text" name="additional_defendant_address[]" value="<?php echo htmlspecialchars($defendant['address']); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter defendant address">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <button type="button" class="remove-defendant px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                                        <i class="fas fa-trash mr-2"></i>Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <button type="button" id="addMoreDefendant" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-plus mr-2"></i>Add More Defendant
+                        </button>
                     </div>
 
                     <!-- Court & Legal Information -->
@@ -483,6 +640,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="./assets/script.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Add More Plaintiff Functionality
+            document.getElementById('addMorePlaintiff').addEventListener('click', function(e) {
+                e.preventDefault();
+                const container = document.getElementById('additionalPlaintiffs');
+                const newRow = document.createElement('div');
+                newRow.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-3 bg-white rounded border border-blue-200';
+                newRow.innerHTML = `
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Plaintiff Name</label>
+                        <input type="text" name="additional_plaintiff_name[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter plaintiff name">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Plaintiff Address</label>
+                        <input type="text" name="additional_plaintiff_address[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter plaintiff address">
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="button" class="remove-plaintiff px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                            <i class="fas fa-trash mr-2"></i>Remove
+                        </button>
+                    </div>
+                `;
+                container.appendChild(newRow);
+                
+                // Add remove functionality
+                newRow.querySelector('.remove-plaintiff').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    newRow.remove();
+                });
+            });
+
+            // Add More Defendant Functionality
+            document.getElementById('addMoreDefendant').addEventListener('click', function(e) {
+                e.preventDefault();
+                const container = document.getElementById('additionalDefendants');
+                const newRow = document.createElement('div');
+                newRow.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-3 bg-white rounded border border-blue-200';
+                newRow.innerHTML = `
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant Name</label>
+                        <input type="text" name="additional_defendant_name[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter defendant name">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1">Defendant Address</label>
+                        <input type="text" name="additional_defendant_address[]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" placeholder="Enter defendant address">
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="button" class="remove-defendant px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                            <i class="fas fa-trash mr-2"></i>Remove
+                        </button>
+                    </div>
+                `;
+                container.appendChild(newRow);
+                
+                // Add remove functionality
+                newRow.querySelector('.remove-defendant').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    newRow.remove();
+                });
+            });
+
+            // Add remove functionality to existing plaintiff rows
+            document.querySelectorAll('.remove-plaintiff').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    this.closest('div').remove();
+                });
+            });
+
+            // Add remove functionality to existing defendant rows
+            document.querySelectorAll('.remove-defendant').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    this.closest('div').remove();
+                });
+            });
+
             // Add More Fee Functionality
             document.getElementById('addMoreFee').addEventListener('click', function() {
                 const tbody = document.getElementById('feeGridBody');
