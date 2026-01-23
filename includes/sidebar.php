@@ -1,14 +1,8 @@
 <!-- Sidebar -->
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <i class="fas fa-balance-scale text-white"></i>
-            </div>
-            <div>
-                <h2 class="text-gray-800 font-bold text-base">Case Management</h2>
-                <p class="text-gray-600 text-xs">System Panel</p>
-            </div>
+        <div class="flex items-center justify-center">
+            <img src="./assets/mps-logo.png" alt="Case Management Logo" class="w-50 h-40">
         </div>
     </div>
 

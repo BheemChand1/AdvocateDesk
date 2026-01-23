@@ -38,10 +38,16 @@ require_once 'includes/connection.php';
                 <h1 class="text-2xl font-bold text-gray-800">
                     <i class="fas fa-envelope-open-text text-blue-500 mr-2"></i>All Notices
                 </h1>
-                <a href="create-notice.php"
-                    class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition shadow-md">
-                    <i class="fas fa-plus mr-2"></i>Create Notice
-                </a>
+                <div class="flex gap-3 flex-wrap">
+                    <button onclick="printNotices()" 
+                        class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition shadow-md">
+                        <i class="fas fa-print mr-2"></i>Print
+                    </button>
+                    <a href="create-notice.php"
+                        class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition shadow-md">
+                        <i class="fas fa-plus mr-2"></i>Create Notice
+                    </a>
+                </div>
             </div>
 
             <!-- Success/Error Messages -->
@@ -578,6 +584,54 @@ require_once 'includes/connection.php';
                     alert('Error deleting notice');
                 });
             }
+        }
+
+        // Print notices function
+        function printNotices() {
+            const table = document.getElementById('noticesTable');
+            const printWindow = window.open('', '', 'height=800,width=1200');
+            printWindow.document.write('<html><head><title>Notices Report</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
+            printWindow.document.write('h2 { color: #1f2937; text-align: center; margin-bottom: 20px; }');
+            printWindow.document.write('table { border-collapse: collapse; width: 100%; margin-top: 20px; }');
+            printWindow.document.write('th { background-color: #3b82f6; color: white; padding: 12px; text-align: left; border: 1px solid #ddd; }');
+            printWindow.document.write('td { padding: 10px; border: 1px solid #ddd; }');
+            printWindow.document.write('tr:nth-child(even) { background-color: #f9fafb; }');
+            printWindow.document.write('tr:hover { background-color: #f3f4f6; }');
+            printWindow.document.write('.status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }');
+            printWindow.document.write('.status-open { background-color: #dbeafe; color: #1e40af; }');
+            printWindow.document.write('.status-closed { background-color: #f3f4f6; color: #1f2937; }');
+            printWindow.document.write('@media print { body { margin: 0; } }');
+            printWindow.document.write('</style></head><body>');
+            printWindow.document.write('<h2>Notices Report</h2>');
+            
+            // Create a copy of the table for printing
+            const tableClone = table.cloneNode(true);
+            
+            // Format the table for printing
+            const rows = tableClone.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                // Remove action column (last column)
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 0) {
+                    cells[cells.length - 1].remove();
+                }
+            });
+            
+            // Remove action column header
+            const headerCells = tableClone.querySelectorAll('thead th');
+            if (headerCells.length > 0) {
+                headerCells[headerCells.length - 1].remove();
+            }
+            
+            // Apply inline styles to table
+            tableClone.style.cssText = 'width: 100%; border-collapse: collapse;';
+            
+            printWindow.document.write(tableClone.outerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
         }
     </script>
 </body>

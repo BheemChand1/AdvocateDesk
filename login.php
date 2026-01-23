@@ -63,11 +63,10 @@ if (isset($_COOKIE['remember_user']) && !isset($_SESSION['user_logged_in'])) {
         <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8">
             <!-- Logo & Title -->
             <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl mb-4">
-                    <i class="fas fa-balance-scale text-white text-3xl"></i>
+                <div class="inline-flex items-center justify-center mb-4">
+                    <img src="./assets/mps-logo.png" alt="Case Management Logo" class="h-50 w-50">
                 </div>
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">User Login</h1>
-                <p class="text-gray-600">Case Management System</p>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">User Login</h3>
             </div>
 
             <!-- Error Message -->

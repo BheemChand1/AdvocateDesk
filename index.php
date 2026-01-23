@@ -93,6 +93,11 @@ while ($row = mysqli_fetch_assoc($result)) {
     $case_type_breakdown[] = $row;
 }
 
+// Priority Cases
+$result = mysqli_query($conn, "SELECT COUNT(*) as count FROM cases WHERE priority_status = 1");
+$row = mysqli_fetch_assoc($result);
+$stats['priority_cases'] = $row['count'] ?? 0;
+
 // Get notices due/overdue for dashboard
 $notices_query = "SELECT id, unique_notice_id, client_id, section, act, due_date, status,
                  DATEDIFF(due_date, CURDATE()) as days_left
@@ -223,6 +228,22 @@ while ($row = mysqli_fetch_assoc($notices_result)) {
                     </div>
                     <div class="pt-4 border-t border-white/20">
                         <p class="text-xs sm:text-sm text-white/70">Available categories</p>
+                    </div>
+                </a>
+
+                <!-- Card 7 - Priority Cases -->
+                <a href="cause-list.php?priority=1" class="stat-card gradient-priority rounded-xl p-6 sm:p-8 text-white shadow-lg hover:shadow-xl transition cursor-pointer">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="text-white/80 text-sm sm:text-base mb-2">Priority Cases</p>
+                            <div class="text-3xl sm:text-4xl font-bold"><?php echo $stats['priority_cases']; ?></div>
+                        </div>
+                        <div class="icon-box">
+                            <i class="fas fa-star text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-white/20">
+                        <p class="text-xs sm:text-sm text-white/70">High priority cases</p>
                     </div>
                 </a>
 

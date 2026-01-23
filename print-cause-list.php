@@ -156,20 +156,70 @@ body {
 }
 
 .print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #000;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+}
+
+.print-header-left {
+    flex: 1;
+}
+
+.print-header-left h2 {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: #000;
+}
+
+.print-header-left p {
+    font-size: 12px;
+    font-weight: bold;
+    margin: 3px 0;
+    color: #000;
+}
+
+.print-header-right {
+    text-align: right;
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.print-header-right img {
+    height: 70px;
+    width: auto;
+    display: block;
+}
+
+.print-header-title {
     text-align: center;
-    border-bottom: 2px solid #000;
-    margin-bottom: 8px;
-    padding-bottom: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 10px 0 5px 0;
 }
 
-.print-header h1 {
-    font-size: 20px;
-    margin: 0;
-}
-
-.print-header p {
-    font-size: 11px;
-    margin: 2px 0 0;
+@media (max-width: 600px) {
+    .print-header {
+        flex-direction: column;
+        text-align: center;
+        padding-bottom: 15px;
+    }
+    
+    .print-header-left {
+        margin-bottom: 15px;
+    }
+    
+    .print-header-right {
+        margin-left: 0;
+    }
+    
+    .print-header-right img {
+        height: 60px;
+        margin: 0 auto;
+    }
 }
 
 table {
@@ -192,6 +242,14 @@ th {
     background: #f0f0f0;
 }
 
+td.next-date-cell {
+    min-height: 40px;
+    padding: 12px 6px;
+    vertical-align: top;
+    width: 120px;
+    min-width: 120px;
+}
+
 tr {
     page-break-inside: avoid;
 }
@@ -210,9 +268,18 @@ tr {
 <div class="print-container">
 
 <div class="print-header">
-    <h1>Cause List</h1>
-    <p>Generated on <?= date('d M, Y H:i'); ?></p>
+    <div class="print-header-left">
+        <h2>Gaurav Sharma, Advocate</h2>
+        <p>Dehradun</p>
+        <p>Mob. 9411119967</p>
+    </div>
+    <div class="print-header-right">
+        <img src="./assets/mps-logo.png" alt="MPS Legal Logo">
+    </div>
 </div>
+
+<div class="print-header-title">Cause List</div>
+<p style="text-align:center;font-size:11px;margin:3px 0 10px 0;">Generated on <?= date('d M, Y H:i'); ?></p>
 
 <?php if ($cases): ?>
 <table>
@@ -228,8 +295,7 @@ tr {
     <th>Fixed Date</th>
     <th>Type</th>
     <th>Stage</th>
-    <th>Total</th>
-    <th>Balance</th>
+    <th>Next Date</th>
 </tr>
 </thead>
 <tbody>
@@ -245,14 +311,13 @@ tr {
 <td><?= date('d M Y', strtotime($c['latest_position_date'] ?? $c['filing_date'])) ?></td>
 <td><?= ucwords(str_replace('-', ' ', $c['case_type'])) ?></td>
 <td><?= $c['latest_position'] ?? 'No Update' ?></td>
-<td class="text-green">₹<?= number_format($c['total_fees'],2) ?></td>
-<td class="<?= $c['balance_fees'] > 0 ? 'text-orange' : '' ?>">₹<?= number_format($c['balance_fees'],2) ?></td>
+<td class="next-date-cell"></td>
 </tr>
 <?php endforeach; ?>
 </tbody>
 </table>
 
-<p style="text-align:center;margin-top:15px;">
+<p style="text-align:center;margin-top:15px;font-size:12px;">
 Total Cases: <?= count($cases) ?><br>
 <button onclick="window.print()">Print</button>
 </p>

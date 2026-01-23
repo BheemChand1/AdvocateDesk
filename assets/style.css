@@ -431,6 +431,10 @@ select:focus {
     background: linear-gradient(135deg, #157a7b 0%, #1d0438 100%);
 }
 
+.gradient-priority {
+    background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+}
+
 .gradient-accounts {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 }

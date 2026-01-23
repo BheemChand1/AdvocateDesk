@@ -22,7 +22,11 @@ $query = "SELECT DISTINCT
     c.status,
     cl.name as customer_name,
     cl.mobile,
-    cl.email
+    cl.email,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('accused', 'defendant') THEN name 
+    END SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as accused_opposite_party
 FROM cases c
 LEFT JOIN clients cl ON c.client_id = cl.client_id
 LEFT JOIN case_parties cp ON c.id = cp.case_id
@@ -148,6 +152,7 @@ if ($result) {
                             <tr>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Case ID</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Customer Name</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Accused/Opposite Party</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Mobile</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Email</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Loan No.</th>
@@ -159,7 +164,7 @@ if ($result) {
                         <tbody class="divide-y divide-gray-200">
                             <?php if (empty($cases)): ?>
                             <tr>
-                                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                                <td colspan="9" class="px-6 py-8 text-center text-gray-500">
                                     <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
                                     <p>No cases found. <a href="create-case.php" class="text-blue-600 hover:underline">Create your first case</a></p>
                                 </td>
@@ -169,6 +174,7 @@ if ($result) {
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="px-6 py-4 text-sm font-bold text-purple-600"><?php echo htmlspecialchars($case['unique_case_id'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900"><?php echo htmlspecialchars($case['customer_name'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?></td>
                                 <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['mobile'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['email'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm font-medium text-blue-600"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></td>
@@ -242,6 +248,10 @@ if ($result) {
                             </div>
                         </div>
                         <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-gavel w-5 text-purple-500"></i>
+                                <span class="ml-2"><strong>Opposite Party:</strong> <?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?></span>
+                            </div>
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-phone w-5 text-blue-500"></i>
                                 <span class="ml-2"><strong>Mobile:</strong> <?php echo htmlspecialchars($case['mobile'] ?? '-'); ?></span>

@@ -41,6 +41,9 @@ mysqli_query($conn, $create_table_sql);
 $message = '';
 $message_type = '';
 
+// Get search parameter
+$search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'add_bill') {
         $case_id = mysqli_real_escape_string($conn, $_POST['case_id']);
@@ -97,7 +100,21 @@ LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
 LEFT JOIN case_parties cp ON c.id = cp.case_id
 LEFT JOIN case_position_updates cpu ON c.id = cpu.case_id AND cpu.payment_status = 'pending'
-WHERE cpu.id IS NOT NULL AND cpu.fee_amount > 0
+WHERE cpu.id IS NOT NULL AND cpu.fee_amount > 0";
+
+// Apply search filter
+if (!empty($search_query)) {
+    $search_term = '%' . mysqli_real_escape_string($conn, $search_query) . '%';
+    $pending_cases_sql .= " AND (
+        c.cnr_number LIKE '" . $search_term . "'
+        OR c.unique_case_id LIKE '" . $search_term . "'
+        OR cl.name LIKE '" . $search_term . "'
+        OR COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '" . $search_term . "'
+        OR cp.name LIKE '" . $search_term . "'
+    )";
+}
+
+$pending_cases_sql .= "
 GROUP BY c.id, cpu.id
 ORDER BY c.created_at DESC, cpu.update_date DESC, cpu.position
 ";
@@ -181,6 +198,49 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                         </div>
                     </div>
                     <div class="p-6">
+                        <!-- Search Filter -->
+                        <div class="mb-6 flex gap-3 items-center flex-wrap">
+                            <form method="GET" class="w-full flex gap-3 items-center">
+                                <div class="flex-1 min-w-[250px]">
+                                    <input 
+                                        type="text" 
+                                        name="search" 
+                                        placeholder="Search by Case ID, Case No., CNR No., Client Name, or Opposite Party..." 
+                                        value="<?php echo htmlspecialchars($search_query); ?>"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                    >
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    class="px-6 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 transition whitespace-nowrap"
+                                >
+                                    <i class="fas fa-search mr-2"></i>Search
+                                </button>
+                                <?php if (!empty($search_query)): ?>
+                                <a 
+                                    href="pending-cases.php" 
+                                    class="px-6 py-2 bg-gray-400 text-white rounded-lg font-medium hover:bg-gray-500 transition whitespace-nowrap"
+                                >
+                                    <i class="fas fa-times mr-2"></i>Clear
+                                </a>
+                                <?php endif; ?>
+                            </form>
+                        </div>
+                        <!-- Export and Print Buttons -->
+                        <div class="mb-6 flex gap-3 flex-wrap">
+                            <a 
+                                href="export-pending-cases.php<?php echo !empty($search_query) ? '?search=' . urlencode($search_query) : ''; ?>" 
+                                class="px-6 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-2"
+                            >
+                                <i class="fas fa-file-excel"></i>Export to Excel
+                            </a>
+                            <button 
+                                onclick="printTable('pendingTable')" 
+                                class="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-2"
+                            >
+                                <i class="fas fa-print"></i>Print
+                            </button>
+                        </div>
                         <div class="overflow-x-auto">
                             <table class="w-full" id="pendingTable">
                                 <thead>
@@ -361,6 +421,24 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                 currentPage--;
                 updatePagination();
             }
+        }
+
+        // Print function
+        function printTable(tableId) {
+            const table = document.getElementById(tableId);
+            const printWindow = window.open('', '', 'height=800,width=1000');
+            printWindow.document.write('<html><head><title>Pending Cases</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write('table { border-collapse: collapse; width: 100%; }');
+            printWindow.document.write('th, td { border: 1px solid #000; padding: 8px; text-align: left; }');
+            printWindow.document.write('th { background-color: #f3f4f6; font-weight: bold; }');
+            printWindow.document.write('body { font-family: Arial, sans-serif; }');
+            printWindow.document.write('</style></head><body>');
+            printWindow.document.write('<h2>Pending Cases Report</h2>');
+            printWindow.document.write(table.outerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
         }
     </script>
 </body>
