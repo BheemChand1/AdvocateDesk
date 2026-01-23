@@ -60,9 +60,14 @@ if (!empty($search)) {
                         <span class="text-sm font-normal text-gray-600">(Total: <?php echo $total_clients; ?>)</span>
                     </h1>
                 </div>
-                <a href="create-client.php" class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg">
-                    <i class="fas fa-plus mr-2"></i>Add New Client
-                </a>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="exportClientsToExcel()" class="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-lg">
+                        <i class="fas fa-file-excel mr-2"></i>Export to Excel
+                    </button>
+                    <a href="create-client.php" class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg">
+                        <i class="fas fa-plus mr-2"></i>Add New Client
+                    </a>
+                </div>
             </div>
 
             <?php if ($success_message): ?>
@@ -221,6 +226,21 @@ if (!empty($search)) {
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script>
+        // Function to export clients to Excel
+        function exportClientsToExcel() {
+            const searchParams = new URLSearchParams(window.location.search);
+            const search = searchParams.get('search') || '';
+            
+            // Build query string
+            let queryString = '';
+            if (search) {
+                queryString = '?search=' + encodeURIComponent(search);
+            }
+            
+            // Redirect to export handler
+            window.location.href = 'export-clients.php' + queryString;
+        }
+        
         $(document).ready(function() {
             $('#clientsTable').DataTable({
                 "pageLength": 10,

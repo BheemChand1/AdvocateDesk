@@ -112,7 +112,7 @@ function insertParties($conn, $case_id, $case_type, $data) {
         ],
         'CRIMINAL' => [
             'complainant' => ['complainant_name', 'complainant_address', 'additional_complainant_name', 'additional_complainant_address'],
-            'defendant' => ['defendant_name', 'defendant_address', 'additional_defendant_name', 'additional_defendant_address']
+            'accused' => ['accused_name', 'accused_address', 'additional_accused_name', 'additional_accused_address']
         ],
         'CONSUMER_CIVIL' => [
             'complainant' => ['complainant_name', 'complainant_address'],
