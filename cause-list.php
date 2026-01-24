@@ -74,6 +74,7 @@ LEFT JOIN case_criminal_details cr ON c.id = cr.case_id
 LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
 LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
+LEFT JOIN case_parties cp ON c.id = cp.case_id
 LEFT JOIN (
     SELECT case_id, update_date, position
     FROM case_position_updates
@@ -155,6 +156,7 @@ LEFT JOIN case_criminal_details cr ON c.id = cr.case_id
 LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
 LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
+LEFT JOIN case_parties cp ON c.id = cp.case_id
 LEFT JOIN (
     SELECT case_id, update_date, position
     FROM case_position_updates

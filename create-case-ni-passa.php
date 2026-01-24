@@ -217,16 +217,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Bounce Reason <span class="text-red-500">*</span></label>
-                                <select name="bounce_reason" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Select bounce reason</option>
-                                    <option value="Fund Insufficient">Fund Insufficient</option>
-                                    <option value="Account Closed">Account Closed</option>
-                                    <option value="Signature Mismatch">Signature Mismatch</option>
-                                    <option value="Stop Payment">Stop Payment</option>
-                                    <option value="Exceeds Arrangement">Exceeds Arrangement</option>
-                                    <option value="Account Frozen">Account Frozen</option>
-                                    <option value="Other">Other</option>
-                                </select>
+                                <input type="text" name="bounce_reason" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter bounce reason">
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Notice Date</label>
