@@ -20,9 +20,17 @@ $query = "SELECT DISTINCT
     c.case_type,
     c.loan_number,
     c.status,
+    c.cnr_number,
     cl.name as customer_name,
     cl.mobile,
     cl.email,
+    COALESCE(
+        ni.filing_date,
+        cr.filing_date,
+        cc.case_filling_date,
+        ep.date_of_filing,
+        ao.filing_date
+    ) as filing_date,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
     END SEPARATOR ', ') 
@@ -30,6 +38,11 @@ $query = "SELECT DISTINCT
 FROM cases c
 LEFT JOIN clients cl ON c.client_id = cl.client_id
 LEFT JOIN case_parties cp ON c.id = cp.case_id
+LEFT JOIN case_ni_passa_details ni ON c.id = ni.case_id
+LEFT JOIN case_criminal_details cr ON c.id = cr.case_id
+LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
+LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
+LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
 WHERE 1=1";
 
 // Add status filter
@@ -151,12 +164,14 @@ if ($result) {
                         <thead class="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
                             <tr>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Case ID</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">CNR No.</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">Filing Date</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Customer Name</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Accused/Opposite Party</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Mobile</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">Mobile</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Email</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Loan No.</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold">Case Type</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">Loan No.</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">Case Type</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Status</th>
                                 <th class="px-6 py-4 text-center text-sm font-semibold">Actions</th>
                             </tr>
@@ -173,13 +188,15 @@ if ($result) {
                             <?php foreach ($cases as $case): ?>
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="px-6 py-4 text-sm font-bold text-purple-600"><?php echo htmlspecialchars($case['unique_case_id'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap"><?php echo $case['filing_date'] ? date('d-m-Y', strtotime($case['filing_date'])) : 'N/A'; ?></td>
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900"><?php echo htmlspecialchars($case['customer_name'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?></td>
-                                <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['mobile'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap"><?php echo htmlspecialchars($case['mobile'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm text-gray-600"><?php echo htmlspecialchars($case['email'] ?? '-'); ?></td>
-                                <td class="px-6 py-4 text-sm font-medium text-blue-600"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></td>
+                                <td class="px-6 py-4 text-sm font-medium text-blue-600 whitespace-nowrap"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></td>
                                 <td class="px-6 py-4 text-sm">
-                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold whitespace-nowrap">
                                         <?php echo htmlspecialchars($case['case_type'] ?? '-'); ?>
                                     </span>
                                 </td>
@@ -189,7 +206,7 @@ if ($result) {
                                         echo $status == 'active' ? 'bg-green-100 text-green-800' : 
                                              ($status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
                                              ($status == 'closed' ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')); 
-                                    ?> rounded-full text-xs font-semibold">
+                                    ?> rounded-full text-xs font-semibold whitespace-nowrap">
                                         <?php echo htmlspecialchars(ucfirst($case['status'] ?? 'Pending')); ?>
                                     </span>
                                 </td>
@@ -248,6 +265,14 @@ if ($result) {
                             </div>
                         </div>
                         <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-barcode w-5 text-purple-500"></i>
+                                <span class="ml-2"><strong>CNR No.:</strong> <?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?></span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-calendar w-5 text-purple-500"></i>
+                                <span class="ml-2"><strong>Filing Date:</strong> <?php echo $case['filing_date'] ? date('d-m-Y', strtotime($case['filing_date'])) : 'N/A'; ?></span>
+                            </div>
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-gavel w-5 text-purple-500"></i>
                                 <span class="ml-2"><strong>Opposite Party:</strong> <?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?></span>

@@ -235,7 +235,7 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                 <i class="fas fa-file-excel"></i>Export to Excel
                             </a>
                             <button 
-                                onclick="printTable('pendingTable')" 
+                                onclick="openPrintPage()" 
                                 class="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-2"
                             >
                                 <i class="fas fa-print"></i>Print
@@ -421,6 +421,19 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                 currentPage--;
                 updatePagination();
             }
+        }
+
+        // Print function - open in new window
+        function openPrintPage() {
+            const searchParams = new URLSearchParams(window.location.search);
+            const search = searchParams.get('search') || '';
+            
+            let queryString = '';
+            if (search) {
+                queryString = '?search=' + encodeURIComponent(search);
+            }
+            
+            window.open('print-pending-cases.php' + queryString, 'printWindow', 'width=1400,height=900');
         }
 
         // Print function

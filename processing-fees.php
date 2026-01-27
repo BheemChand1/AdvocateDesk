@@ -1,4 +1,9 @@
 <?php
+// Suppress output errors to prevent "headers already sent" issues
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ob_start();
+
 session_start();
 
 // Check if user is logged in
@@ -12,11 +17,11 @@ require_once 'includes/connection.php';
 // Ensure case_position_updates has completed_date column
 $check_column_query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
                        WHERE TABLE_NAME='case_position_updates' AND COLUMN_NAME='completed_date'";
-$result = mysqli_query($conn, $check_column_query);
+$result = @mysqli_query($conn, $check_column_query);
 
-if (mysqli_num_rows($result) === 0) {
+if ($result && mysqli_num_rows($result) === 0) {
     // Add completed_date column if it doesn't exist
-    mysqli_query($conn, "ALTER TABLE case_position_updates ADD COLUMN completed_date DATE");
+    @mysqli_query($conn, "ALTER TABLE case_position_updates ADD COLUMN completed_date DATE");
 }
 
 // Handle form submissions
@@ -127,12 +132,14 @@ GROUP BY cpu.id
 ORDER BY cpu.update_date DESC
 ";
 
-$processing_result = mysqli_query($conn, $processing_sql);
+$processing_result = @mysqli_query($conn, $processing_sql);
 $processing_accounts = [];
-while ($row = mysqli_fetch_assoc($processing_result)) {
-    $processing_accounts[] = $row;
+if ($processing_result) {
+    while ($row = mysqli_fetch_assoc($processing_result)) {
+        $processing_accounts[] = $row;
+    }
 }
-
+ob_end_clean();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -243,7 +250,7 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
                                 <i class="fas fa-file-excel"></i>Export to Excel
                             </a>
                             <button 
-                                onclick="printTable('processingTable')" 
+                                onclick="openPrintPage()" 
                                 class="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-2"
                             >
                                 <i class="fas fa-print"></i>Print
@@ -509,22 +516,17 @@ while ($row = mysqli_fetch_assoc($processing_result)) {
             }
         });
 
-        // Print function
-        function printTable(tableId) {
-            const table = document.getElementById(tableId);
-            const printWindow = window.open('', '', 'height=800,width=1000');
-            printWindow.document.write('<html><head><title>Processing Fees</title>');
-            printWindow.document.write('<style>');
-            printWindow.document.write('table { border-collapse: collapse; width: 100%; }');
-            printWindow.document.write('th, td { border: 1px solid #000; padding: 8px; text-align: left; }');
-            printWindow.document.write('th { background-color: #f3f4f6; font-weight: bold; }');
-            printWindow.document.write('body { font-family: Arial, sans-serif; }');
-            printWindow.document.write('</style></head><body>');
-            printWindow.document.write('<h2>Processing Fees Report</h2>');
-            printWindow.document.write(table.outerHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.print();
+        // Print function - open in new window
+        function openPrintPage() {
+            const searchParams = new URLSearchParams(window.location.search);
+            const search = searchParams.get('search') || '';
+            
+            let queryString = '';
+            if (search) {
+                queryString = '?search=' + encodeURIComponent(search);
+            }
+            
+            window.open('print-processing-fees.php' + queryString, 'printWindow', 'width=1400,height=900');
         }
     </script>
 </body>

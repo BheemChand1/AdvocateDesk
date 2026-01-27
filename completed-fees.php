@@ -214,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <i class="fas fa-file-excel"></i>Export to Excel
                             </a>
                             <button 
-                                onclick="printTable('completedTable')" 
+                                onclick="openPrintPage()" 
                                 class="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-2"
                             >
                                 <i class="fas fa-print"></i>Print
@@ -495,22 +495,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
 
-        // Print function
-        function printTable(tableId) {
-            const table = document.getElementById(tableId);
-            const printWindow = window.open('', '', 'height=800,width=1000');
-            printWindow.document.write('<html><head><title>Completed Fees</title>');
-            printWindow.document.write('<style>');
-            printWindow.document.write('table { border-collapse: collapse; width: 100%; }');
-            printWindow.document.write('th, td { border: 1px solid #000; padding: 8px; text-align: left; }');
-            printWindow.document.write('th { background-color: #f3f4f6; font-weight: bold; }');
-            printWindow.document.write('body { font-family: Arial, sans-serif; }');
-            printWindow.document.write('</style></head><body>');
-            printWindow.document.write('<h2>Completed Fees Report</h2>');
-            printWindow.document.write(table.outerHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.print();
+        // Print function - open in new window
+        function openPrintPage() {
+            const searchParams = new URLSearchParams(window.location.search);
+            const search = searchParams.get('search') || '';
+            
+            let queryString = '';
+            if (search) {
+                queryString = '?search=' + encodeURIComponent(search);
+            }
+            
+            window.open('print-completed-fees.php' + queryString, 'printWindow', 'width=1400,height=900');
         }
     </script>
 </body>
