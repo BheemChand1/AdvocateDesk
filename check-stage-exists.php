@@ -13,13 +13,24 @@ require_once 'includes/connection.php';
 // Get POST data
 $case_id = isset($_POST['case_id']) ? intval($_POST['case_id']) : 0;
 $position = isset($_POST['position']) ? mysqli_real_escape_string($conn, $_POST['position']) : '';
+$fee_amount = isset($_POST['fee_amount']) ? floatval($_POST['fee_amount']) : 0;
 
 if ($case_id == 0 || empty($position)) {
     echo json_encode(['exists' => false]);
     exit();
 }
 
-// Check if this stage/position already exists for this case
+// If fee_amount is 0, allow duplicates (don't check for existing)
+if ($fee_amount == 0) {
+    echo json_encode([
+        'exists' => false,
+        'count' => 0,
+        'reason' => 'Zero fee stages can be duplicated'
+    ]);
+    exit();
+}
+
+// Check if this stage/position already exists for this case (only for non-zero fees)
 $query = "SELECT COUNT(*) as count FROM case_position_updates 
           WHERE case_id = $case_id AND position = '$position'";
 

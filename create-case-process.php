@@ -104,27 +104,27 @@ function insertParties($conn, $case_id, $case_type, $data) {
         VALUES (?, ?, ?, ?, ?)
     ");
     
-    // Define party mappings based on case type
+    // Define party mappings based on case type - ONLY include name fields (addresses are derived automatically)
     $party_mappings = [
         'NI_PASSA' => [
-            'complainant' => ['complainant_name', 'complainant_address'],
-            'accused' => ['accused_name', 'accused_address', 'additional_accused_name', 'additional_accused_address']
+            'complainant' => ['complainant_name'],
+            'accused' => ['accused_name', 'additional_accused_name']
         ],
         'CRIMINAL' => [
-            'complainant' => ['complainant_name', 'complainant_address', 'additional_complainant_name', 'additional_complainant_address'],
-            'accused' => ['accused_name', 'accused_address', 'additional_accused_name', 'additional_accused_address']
+            'complainant' => ['complainant_name', 'additional_complainant_name'],
+            'accused' => ['accused_name', 'additional_accused_name']
         ],
         'CONSUMER_CIVIL' => [
-            'complainant' => ['complainant_name', 'complainant_address'],
-            'defendant' => ['defendant_name', 'defendant_address', 'additional_defendant_name', 'additional_defendant_address']
+            'complainant' => ['complainant_name', 'additional_complainant_name'],
+            'defendant' => ['defendant_name', 'additional_defendant_name']
         ],
         'EP_ARBITRATION' => [
-            'decree_holder' => ['decree_holder_client', 'decree_holder_client_address', 'additional_decree_holder_name', 'additional_decree_holder_address'],
-            'defendant' => ['defendant_name', 'defendant_address', 'additional_defendant_name', 'additional_defendant_address']
+            'decree_holder' => ['decree_holder_client', 'additional_decree_holder_name'],
+            'defendant' => ['customer_name_defendant', 'additional_defendant_name']
         ],
         'ARBITRATION_OTHER' => [
-            'plaintiff' => ['plaintiff_name', 'plaintiff_address', 'additional_plaintiff_name', 'additional_plaintiff_address'],
-            'defendant' => ['defendant_name', 'defendant_address', 'additional_defendant_name', 'additional_defendant_address']
+            'plaintiff' => ['plaintiff_name', 'additional_plaintiff_name'],
+            'defendant' => ['defendant_name', 'additional_defendant_name']
         ]
     ];
     
@@ -142,9 +142,11 @@ function insertParties($conn, $case_id, $case_type, $data) {
                     if (is_array($names)) {
                         foreach ($names as $index => $name) {
                             if (!empty($name)) {
-                                $address = $addresses[$index] ?? null;
+                                $name_safe = mysqli_real_escape_string($conn, $name);
+                                $address_safe = mysqli_real_escape_string($conn, $addresses[$index] ?? '');
                                 $is_primary_flag = 0;
-                                mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $name, $address, $is_primary_flag);
+                                $party_type_local = $party_type;
+                                mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type_local, $name_safe, $address_safe, $is_primary_flag);
                                 mysqli_stmt_execute($stmt);
                             }
                         }
@@ -153,9 +155,19 @@ function insertParties($conn, $case_id, $case_type, $data) {
                     // Handle single fields (primary parties)
                     $name = $data[$field] ?? null;
                     if (!empty($name)) {
-                        $address_field = str_replace('_name', '_address', $field);
-                        $address = $data[$address_field] ?? null;
-                        mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type, $name, $address, $is_primary);
+                        $name_safe = mysqli_real_escape_string($conn, $name);
+                        // Derive address field - handle special cases for non-standard field names
+                        if ($field === 'decree_holder_client') {
+                            $address_field = 'decree_holder_address';
+                        } elseif ($field === 'customer_name_defendant') {
+                            $address_field = 'customer_address';
+                        } else {
+                            $address_field = str_replace('_name', '_address', $field);
+                        }
+                        $address_safe = mysqli_real_escape_string($conn, $data[$address_field] ?? '');
+                        $is_primary_flag = $is_primary ? 1 : 0;
+                        $party_type_local = $party_type;
+                        mysqli_stmt_bind_param($stmt, "isssi", $case_id, $party_type_local, $name_safe, $address_safe, $is_primary_flag);
                         mysqli_stmt_execute($stmt);
                         $is_primary = false; // Only first entry is primary
                     }

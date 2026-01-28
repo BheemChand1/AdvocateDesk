@@ -170,15 +170,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mysqli_query($conn, "DELETE FROM case_parties WHERE case_id = $case_id");
                 
                 // Process Complainant
-                $complainant_address = mysqli_real_escape_string($conn, $_POST['complainant_address'] ?? '');
                 if (!empty($complainant_name)) {
+                    $complainant_name_safe = mysqli_real_escape_string($conn, $complainant_name);
+                    $complainant_address_safe = mysqli_real_escape_string($conn, $_POST['complainant_address'] ?? '');
                     $stmt_party = mysqli_prepare($conn, "
                         INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
                         VALUES (?, ?, ?, ?, ?)
                     ");
                     $is_primary = 1;
                     $party_type = 'complainant';
-                    mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $complainant_name, $complainant_address, $is_primary);
+                    mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $complainant_name_safe, $complainant_address_safe, $is_primary);
                     mysqli_stmt_execute($stmt_party);
                     mysqli_stmt_close($stmt_party);
                 }
@@ -189,16 +190,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (is_array($additional_complainant_names)) {
                     foreach ($additional_complainant_names as $index => $add_name) {
                         if (!empty($add_name)) {
+                            $add_name_safe = mysqli_real_escape_string($conn, $add_name);
+                            $add_address_safe = mysqli_real_escape_string($conn, $additional_complainant_addresses[$index] ?? '');
                             $stmt_party = mysqli_prepare($conn, "
                                 INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
                                 VALUES (?, ?, ?, ?, ?)
                             ");
-                            $add_address = $additional_complainant_addresses[$index] ?? '';
-                            $add_name = mysqli_real_escape_string($conn, $add_name);
-                            $add_address = mysqli_real_escape_string($conn, $add_address);
                             $is_primary = 0;
                             $party_type = 'complainant';
-                            mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name, $add_address, $is_primary);
+                            mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name_safe, $add_address_safe, $is_primary);
                             mysqli_stmt_execute($stmt_party);
                             mysqli_stmt_close($stmt_party);
                         }
@@ -206,15 +206,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 // Process Defendant
-                $defendant_address = mysqli_real_escape_string($conn, $_POST['defendant_address'] ?? '');
                 if (!empty($defendant_name)) {
+                    $defendant_name_safe = mysqli_real_escape_string($conn, $defendant_name);
+                    $defendant_address_safe = mysqli_real_escape_string($conn, $_POST['defendant_address'] ?? '');
                     $stmt_party = mysqli_prepare($conn, "
                         INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
                         VALUES (?, ?, ?, ?, ?)
                     ");
                     $is_primary = 1;
                     $party_type = 'defendant';
-                    mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $defendant_name, $defendant_address, $is_primary);
+                    mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $defendant_name_safe, $defendant_address_safe, $is_primary);
                     mysqli_stmt_execute($stmt_party);
                     mysqli_stmt_close($stmt_party);
                 }
@@ -224,16 +225,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (is_array($additional_defendant_names)) {
                     foreach ($additional_defendant_names as $index => $add_name) {
                         if (!empty($add_name)) {
+                            $add_name_safe = mysqli_real_escape_string($conn, $add_name);
+                            $add_address_safe = mysqli_real_escape_string($conn, $additional_defendant_addresses[$index] ?? '');
                             $stmt_party = mysqli_prepare($conn, "
                                 INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
                                 VALUES (?, ?, ?, ?, ?)
                             ");
-                            $add_address = $additional_defendant_addresses[$index] ?? '';
-                            $add_name = mysqli_real_escape_string($conn, $add_name);
-                            $add_address = mysqli_real_escape_string($conn, $add_address);
                             $is_primary = 0;
                             $party_type = 'defendant';
-                            mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name, $add_address, $is_primary);
+                            mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name_safe, $add_address_safe, $is_primary);
                             mysqli_stmt_execute($stmt_party);
                             mysqli_stmt_close($stmt_party);
                         }

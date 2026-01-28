@@ -63,6 +63,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $message = "Error updating bill details: " . mysqli_error($conn);
             $message_type = "error";
         }
+    } elseif ($_POST['action'] === 'edit_fee') {
+        $update_id = mysqli_real_escape_string($conn, $_POST['update_id']);
+        $fee_amount = floatval($_POST['fee_amount']);
+
+        $update_sql = "UPDATE case_position_updates SET fee_amount = $fee_amount WHERE id = $update_id";
+        if (mysqli_query($conn, $update_sql)) {
+            $message = "Fee amount updated successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Error updating fee amount: " . mysqli_error($conn);
+            $message_type = "error";
+        }
+    } elseif ($_POST['action'] === 'delete_fee') {
+        $update_id = mysqli_real_escape_string($conn, $_POST['update_id']);
+
+        $delete_sql = "DELETE FROM case_position_updates WHERE id = $update_id";
+        if (mysqli_query($conn, $delete_sql)) {
+            $message = "Pending case deleted successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Error deleting pending case: " . mysqli_error($conn);
+            $message_type = "error";
+        }
     }
 }
 
@@ -261,11 +284,11 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                     <?php foreach ($pending_cases as $case): ?>
                                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                                         <td class="px-4 py-3 text-sm text-gray-700 font-medium"><?php echo htmlspecialchars($case['unique_case_id']); ?></td>
-                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?></td>
-                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['client_name']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?></td>
-                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['case_type']); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['case_type']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-blue-600">₹<?php echo number_format($case['fee_amount'], 2); ?></td>
                                         <td class="px-4 py-3">
                                             <form method="POST" class="flex gap-2 items-center">
@@ -277,11 +300,23 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                         <td class="px-4 py-3">
                                                 <input type="date" name="bill_date" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-yellow-500" required>
                                         </td>
-                                        <td class="px-4 py-3 text-center">
-                                                <button type="submit" class="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700 transition">
-                                                    <i class="fas fa-save mr-1"></i>Add
+                                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                                            <div class="flex gap-1 justify-center items-center">
+                                                <button type="submit" class="p-2 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700 transition" title="Add Bill">
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                                <button type="button" onclick="openEditModal(<?php echo $case['update_id']; ?>, <?php echo $case['fee_amount']; ?>)" class="p-2 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition" title="Edit Fee">
+                                                    <i class="fas fa-edit"></i>
                                                 </button>
                                             </form>
+                                                <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this pending case?');">
+                                                    <input type="hidden" name="action" value="delete_fee">
+                                                    <input type="hidden" name="update_id" value="<?php echo $case['update_id']; ?>">
+                                                    <button type="submit" class="p-2 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -326,6 +361,39 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
     </div>
 
     <?php include './includes/footer.php'; ?>
+
+    <!-- Edit Fee Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-lg bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-edit text-yellow-500 mr-2"></i>Edit Fee Amount
+                </h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
+                    &times;
+                </button>
+            </div>
+            
+            <form method="POST" class="mt-4">
+                <input type="hidden" name="action" value="edit_fee">
+                <input type="hidden" name="update_id" id="editUpdateId">
+                
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Fee Amount</label>
+                    <input type="number" id="editFeeAmount" name="fee_amount" step="0.01" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                </div>
+                
+                <div class="flex gap-3 justify-end">
+                    <button type="button" onclick="closeEditModal()" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition">
+                        <i class="fas fa-save mr-2"></i>Update Amount
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="./assets/script.js"></script>
     <script>
@@ -435,6 +503,24 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
             
             window.open('print-pending-cases.php' + queryString, 'printWindow', 'width=1400,height=900');
         }
+
+        // Edit modal functions
+        function openEditModal(updateId, feeAmount) {
+            document.getElementById('editUpdateId').value = updateId;
+            document.getElementById('editFeeAmount').value = feeAmount;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('editModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeEditModal();
+            }
+        });
 
         // Print function
         function printTable(tableId) {

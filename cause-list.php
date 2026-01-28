@@ -950,13 +950,13 @@ if ($stages_result) {
                 return;
             }
             
-            // First, check if this stage already exists for this case
+            // First, check if this stage already exists for this case (only for non-zero fees)
             fetch('check-stage-exists.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: 'case_id=' + caseId + '&position=' + encodeURIComponent(position)
+                body: 'case_id=' + caseId + '&position=' + encodeURIComponent(position) + '&fee_amount=' + encodeURIComponent(feeAmount)
             })
             .then(response => response.json())
             .then(data => {
