@@ -521,24 +521,6 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                 closeEditModal();
             }
         });
-
-        // Print function
-        function printTable(tableId) {
-            const table = document.getElementById(tableId);
-            const printWindow = window.open('', '', 'height=800,width=1000');
-            printWindow.document.write('<html><head><title>Pending Cases</title>');
-            printWindow.document.write('<style>');
-            printWindow.document.write('table { border-collapse: collapse; width: 100%; }');
-            printWindow.document.write('th, td { border: 1px solid #000; padding: 8px; text-align: left; }');
-            printWindow.document.write('th { background-color: #f3f4f6; font-weight: bold; }');
-            printWindow.document.write('body { font-family: Arial, sans-serif; }');
-            printWindow.document.write('</style></head><body>');
-            printWindow.document.write('<h2>Pending Cases Report</h2>');
-            printWindow.document.write(table.outerHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.print();
-        }
     </script>
 </body>
 

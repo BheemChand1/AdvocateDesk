@@ -262,6 +262,7 @@ $commonHeaders = [
     'Mobile',
     'Accused/Opposite Party',
     'CNR Number',
+    'Filing Date',
     'Fixed Date',
     'Latest Stage',
     'Total Fee',
@@ -426,6 +427,8 @@ if (count($typesToExport) === 1) {
         $display_date = $case['latest_position_date'] ?: $case['filing_date'];
         $display_date_formatted = $display_date ? date('d M, Y', strtotime($display_date)) : 'Not Filed';
         
+        $filing_date_formatted = $case['filing_date'] ? date('d M, Y', strtotime($case['filing_date'])) : 'N/A';
+        
         $row = [
             $case['unique_case_id'] ?? 'N/A',
             $prev_date_formatted,
@@ -435,6 +438,7 @@ if (count($typesToExport) === 1) {
             $case['mobile'] ?? 'N/A',
             $case['accused_opposite_party'] ?? 'N/A',
             $case['cnr_number'] ?? 'N/A',
+            $filing_date_formatted,
             $display_date_formatted,
             $case['latest_position'] ?? 'No Updates',
             '₹' . number_format($case['total_fees'], 2),
@@ -581,6 +585,8 @@ if (count($typesToExport) === 1) {
             $display_date = $case['latest_position_date'] ?: $case['filing_date'];
             $display_date_formatted = $display_date ? date('d M, Y', strtotime($display_date)) : 'Not Filed';
             
+            $filing_date_formatted = $case['filing_date'] ? date('d M, Y', strtotime($case['filing_date'])) : 'N/A';
+            
             $row = [
                 $case['unique_case_id'] ?? 'N/A',
                 $prev_date_formatted,
@@ -590,6 +596,7 @@ if (count($typesToExport) === 1) {
                 $case['mobile'] ?? 'N/A',
                 $case['accused_opposite_party'] ?? 'N/A',
                 $case['cnr_number'] ?? 'N/A',
+                $filing_date_formatted,
                 $display_date_formatted,
                 $case['latest_position'] ?? 'No Updates',
                 '₹' . number_format($case['total_fees'], 2),
