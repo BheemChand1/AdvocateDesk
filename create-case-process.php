@@ -42,10 +42,10 @@ try {
         mysqli_stmt_close($checkCnrStmt);
     }
 
-    // Generate unique_case_id
-    $countResult = mysqli_query($conn, "SELECT COUNT(*) as count FROM cases");
-    $countRow = mysqli_fetch_assoc($countResult);
-    $nextNumber = $countRow['count'] + 1;
+    // Generate unique_case_id using MAX id to avoid duplicates after deletions
+    $maxResult = mysqli_query($conn, "SELECT MAX(id) as max_id FROM cases");
+    $maxRow = mysqli_fetch_assoc($maxResult);
+    $nextNumber = ($maxRow['max_id'] ?? 0) + 1;
     $unique_case_id = "case" . $nextNumber;
     
     // Insert into main cases table
