@@ -97,9 +97,9 @@ while ($row = mysqli_fetch_assoc($result)) {
         <main class="px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
             <!-- Back Button and Header -->
             <div class="mb-8">
-                <a href="view-cases.php" class="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4 transition">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Cases
-                </a>
+                <button onclick="history.back()" class="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4 transition cursor-pointer bg-none border-none p-0 font-normal">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Previous Page
+                </button>
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h1 class="text-3xl font-bold text-gray-800 mb-2">
