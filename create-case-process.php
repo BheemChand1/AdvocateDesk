@@ -27,6 +27,21 @@ if (!$client_id || !$case_type) {
 mysqli_begin_transaction($conn);
 
 try {
+    // Check if CNR already exists (server-side validation)
+    $cnr_number = isset($_POST['cnr_number']) ? trim($_POST['cnr_number']) : null;
+    if (!empty($cnr_number)) {
+        $checkCnrStmt = mysqli_prepare($conn, "SELECT id FROM cases WHERE cnr_number = ?");
+        mysqli_stmt_bind_param($checkCnrStmt, "s", $cnr_number);
+        mysqli_stmt_execute($checkCnrStmt);
+        $cnrResult = mysqli_stmt_get_result($checkCnrStmt);
+        if (mysqli_fetch_assoc($cnrResult)) {
+            mysqli_stmt_close($checkCnrStmt);
+            mysqli_rollback($conn);
+            die("Error: A case with this CNR number already exists. Please use a different CNR number.");
+        }
+        mysqli_stmt_close($checkCnrStmt);
+    }
+
     // Generate unique_case_id
     $countResult = mysqli_query($conn, "SELECT COUNT(*) as count FROM cases");
     $countRow = mysqli_fetch_assoc($countResult);
@@ -41,7 +56,6 @@ try {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     
-    $cnr_number = $_POST['cnr_number'] ?? null;
     $loan_number = $_POST['loan_number'] ?? null;
     $product = $_POST['product'] ?? null;
     $branch_name = $_POST['branch_name'] ?? null;

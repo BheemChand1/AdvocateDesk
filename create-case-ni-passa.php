@@ -94,8 +94,10 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">CNR NUMBER</label>
-                                <input type="text" name="cnr_number" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter CNR number">
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">CNR NUMBER <span class="text-gray-500 font-normal">(16 characters)</span></label>
+                                <input type="text" name="cnr_number" id="cnr_number" maxlength="16" pattern="[A-Za-z0-9]{16}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" placeholder="Enter 16 character CNR number">
+                                <div id="cnrExistsMessage" class="hidden mt-1 text-red-600 text-sm font-semibold"></div>
+                                <div id="cnrLengthMessage" class="hidden mt-1 text-red-600 text-sm font-semibold"></div>
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Loan Number <span class="text-red-500">*</span></label>
@@ -614,6 +616,84 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
             document.getElementById('selectedClient').classList.add('hidden');
             document.getElementById('clientSearch').value = '';
         }
+
+        // CNR Number Validation
+        let cnrExists = false;
+        let cnrInvalid = false;
+        const cnrInput = document.getElementById('cnr_number');
+        const cnrMessage = document.getElementById('cnrExistsMessage');
+        const cnrLengthMessage = document.getElementById('cnrLengthMessage');
+
+        // Allow only alphanumeric characters and convert to uppercase
+        if (cnrInput) {
+            cnrInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            });
+        }
+
+        if (cnrInput) {
+            cnrInput.addEventListener('blur', function() {
+                const cnr = this.value.trim();
+                
+                // Check length validation
+                if (cnr.length > 0 && cnr.length !== 16) {
+                    cnrInvalid = true;
+                    cnrInput.classList.add('border-red-500', 'bg-red-50');
+                    cnrInput.classList.remove('border-gray-300');
+                    cnrLengthMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>CNR number must be exactly 16 characters!';
+                    cnrLengthMessage.classList.remove('hidden');
+                } else {
+                    cnrInvalid = false;
+                    cnrLengthMessage.classList.add('hidden');
+                }
+                
+                // Check duplicate only if length is valid
+                if (cnr.length === 16) {
+                    fetch('check-cnr-exists.php?cnr=' + encodeURIComponent(cnr))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.exists) {
+                                cnrExists = true;
+                                cnrInput.classList.add('border-red-500', 'bg-red-50');
+                                cnrInput.classList.remove('border-gray-300');
+                                cnrMessage.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>This CNR number already exists!';
+                                cnrMessage.classList.remove('hidden');
+                            } else {
+                                cnrExists = false;
+                                if (!cnrInvalid) {
+                                    cnrInput.classList.remove('border-red-500', 'bg-red-50');
+                                    cnrInput.classList.add('border-gray-300');
+                                }
+                                cnrMessage.classList.add('hidden');
+                            }
+                        })
+                        .catch(error => console.error('Error checking CNR:', error));
+                } else if (cnr.length === 0) {
+                    cnrExists = false;
+                    cnrInvalid = false;
+                    cnrInput.classList.remove('border-red-500', 'bg-red-50');
+                    cnrInput.classList.add('border-gray-300');
+                    cnrMessage.classList.add('hidden');
+                    cnrLengthMessage.classList.add('hidden');
+                }
+            });
+        }
+
+        // Prevent form submission if CNR exists or invalid
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const cnr = cnrInput ? cnrInput.value.trim() : '';
+            if (cnr.length > 0 && cnr.length !== 16) {
+                e.preventDefault();
+                alert('CNR number must be exactly 16 characters!');
+                cnrInput.focus();
+                return;
+            }
+            if (cnrExists) {
+                e.preventDefault();
+                alert('Cannot create case: The CNR number already exists in the system. Please use a different CNR number.');
+                cnrInput.focus();
+            }
+        });
     </script>
 </body>
 

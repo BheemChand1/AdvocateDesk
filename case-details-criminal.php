@@ -687,13 +687,6 @@ while ($row = mysqli_fetch_assoc($result)) {
                     </div>
                 <?php endif; ?>
             </div>
-
-            <!-- Action Buttons -->
-            <div class="mt-6 flex flex-col sm:flex-row items-center justify-end gap-4">
-                <button class="w-full sm:w-auto px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition shadow-lg">
-                    <i class="fas fa-trash mr-2"></i>Delete Case
-                </button>
-            </div>
         </main>
 
         <?php include './includes/footer.php'; ?>
