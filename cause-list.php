@@ -57,9 +57,13 @@ $query = "SELECT
         ''
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('complainant', 'decree_holder') THEN name 
+    END SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
     END SEPARATOR ', ') 
-    FROM case_parties WHERE case_id = c.id) as accused_opposite_party,
+    FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
     previous.update_date as previous_position_date,
@@ -499,7 +503,20 @@ if ($stages_result) {
                                         </td>
                                         <td class="px-6 py-4">
                                             <span class="text-sm text-gray-900">
-                                                <?php echo htmlspecialchars($case['accused_opposite_party'] ?? 'N/A'); ?>
+                                                <?php 
+                                                $plaintiffs = htmlspecialchars($case['plaintiff_parties'] ?? '');
+                                                $defendants = htmlspecialchars($case['defendant_parties'] ?? '');
+                                                
+                                                if ($plaintiffs && $defendants) {
+                                                    echo $plaintiffs . ' <span class="font-semibold text-blue-600">vs</span> ' . $defendants;
+                                                } elseif ($plaintiffs) {
+                                                    echo $plaintiffs;
+                                                } elseif ($defendants) {
+                                                    echo $defendants;
+                                                } else {
+                                                    echo 'N/A';
+                                                }
+                                                ?>
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">

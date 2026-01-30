@@ -709,8 +709,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                                             </div>
                                         <?php endif; ?>
                                         
-                                        <div class="mt-2 text-xs text-gray-500">
-                                            <i class="fas fa-clock mr-1"></i>Updated on <?php echo date('d M, Y h:i A', strtotime($update['created_at'])); ?>
+                                        <div class="mt-3 flex items-center justify-between">
+                                            <div class="text-xs text-gray-500">
+                                                <i class="fas fa-clock mr-1"></i>Updated on <?php echo date('d M, Y h:i A', strtotime($update['created_at'])); ?>
+                                            </div>
+                                            <button onclick="deletePosition(<?php echo $update['id']; ?>, <?php echo $case_id; ?>)" 
+                                                    class="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded hover:bg-red-600 transition flex items-center gap-1">
+                                                <i class="fas fa-trash"></i>Delete
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -813,6 +819,33 @@ while ($row = mysqli_fetch_assoc($result)) {
     </div>
 
     <script src="./assets/script.js"></script>
+    <script>
+        function deletePosition(positionId, caseId) {
+            if (confirm('Are you sure you want to delete this stage? This action cannot be undone.')) {
+                const formData = new FormData();
+                formData.append('position_id', positionId);
+                formData.append('case_id', caseId);
+                
+                fetch('delete-case-position.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Stage deleted successfully!');
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Error deleting stage');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the stage');
+                });
+            }
+        }
+    </script>
 </body>
 
 </html>
