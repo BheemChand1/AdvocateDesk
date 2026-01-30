@@ -211,7 +211,7 @@ require_once 'includes/connection.php';
                             } else {
                                 echo "
                                 <tr>
-                                    <td colspan='8' class='px-4 py-6 text-center text-gray-500'>
+                                    <td colspan='9' class='px-4 py-6 text-center text-gray-500'>
                                         <i class='fas fa-inbox text-3xl mb-2'></i>
                                         <p class='mt-2'>No notices found</p>
                                     </td>
@@ -313,326 +313,122 @@ require_once 'includes/connection.php';
 
     <script src="./assets/script.js"></script>
     <script>
-        let table;
+    var baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1);
+    var table = null;
 
-        // Initialize DataTable
-        $(document).ready(function() {
-            table = $('#noticesTable').DataTable({
-                "pageLength": 10,
-                "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                "paging": true,
-                "searching": true,
-                "ordering": true,
-                "info": true,
-                "autoWidth": false,
-                "language": {
-                    "search": "Search notices:",
-                    "lengthMenu": "Show _MENU_ entries",
-                    "info": "Showing _START_ to _END_ of _TOTAL_ notices",
-                    "infoEmpty": "No notices found",
-                    "paginate": {
-                        "first": "First",
-                        "last": "Last",
-                        "next": "Next",
-                        "previous": "Previous"
-                    }
-                },
-                "columnDefs": [
-                    { "orderable": true, "targets": [0, 1, 2, 3, 4, 5, 6, 7] },
-                    { "orderable": false, "targets": 8 }
-                ]
-            });
+    window.viewNoticeDetails = function(noticeId) {
+        var modal = document.getElementById("viewDetailsModal");
+        var modalContent = document.getElementById("modalContent");
+        modalContent.innerHTML = '<p class="text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p>';
+        modal.classList.remove("hidden");
 
-            // Handle records per page change
-            $('#recordsPerPage').on('change', function() {
-                let value = $(this).val();
-                if (value == -1) {
-                    table.page.len(-1).draw();
-                } else {
-                    table.page.len(parseInt(value)).draw();
-                }
-            });
-
-            // Handle status filter
-            $('#statusFilter').on('change', function() {
-                filterTable();
-            });
-
-            // Handle search input
-            $('#searchInput').on('keyup', function() {
-                table.search(this.value).draw();
-            });
-        });
-
-        function filterTable() {
-            const status = document.getElementById('statusFilter').value;
-            
-            $.fn.dataTable.ext.search.pop();
-            
-            if (status) {
-                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                    const row = table.row(dataIndex).node();
-                    const rowStatus = $(row).data('status');
-                    return rowStatus === status;
-                });
-            }
-            
-            table.draw();
-        }
-
-        function clearFilters() {
-            $('#searchInput').val('');
-            $('#statusFilter').val('');
-            $('#recordsPerPage').val('10');
-            $.fn.dataTable.ext.search.pop();
-            table.search('').page.len(10).draw();
-        }
-        function viewNoticeDetails(noticeId) {
-            const modal = document.getElementById('viewDetailsModal');
-            const modalContent = document.getElementById('modalContent');
-            
-            fetch(`get-notice-details.php?id=${noticeId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const notice = data.notice;
-                        const remarks = data.remarks;
-                        
-                        let remarksHtml = '<h3 class="text-lg font-bold text-gray-800 mb-3">Remarks History</h3>';
-                        remarksHtml += '<div class="space-y-3">';
-                        
-                        if (remarks.length > 0) {
-                            remarks.forEach(remark => {
-                                const remarkDate = new Date(remark.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                                remarksHtml += `
-                                    <div class="border border-gray-300 rounded-lg p-3 bg-gray-50">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold text-blue-600">${remark.created_by || 'User'}</span>
-                                            <span class="text-xs text-gray-500">${remarkDate}</span>
-                                        </div>
-                                        <p class="text-sm text-gray-700">${remark.remark}</p>
-                                    </div>
-                                `;
-                            });
-                        } else {
-                            remarksHtml += '<p class="text-sm text-gray-500">No remarks yet</p>';
-                        }
-                        
-                        remarksHtml += '</div>';
-                        
-                        const daysLeft = Math.ceil((new Date(notice.due_date) - new Date()) / (1000 * 60 * 60 * 24));
-                        const isOverdue = daysLeft < 0;
-                        
-                        modalContent.innerHTML = `
-                            <div class="space-y-4">
-                                <div>
-                                    <p class="text-sm text-gray-600">Notice ID</p>
-                                    <p class="font-mono text-blue-600 font-semibold">${notice.unique_notice_id}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Client</p>
-                                    <p class="font-semibold text-gray-800">${notice.client_name}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Addressee</p>
-                                    <p class="text-gray-800 whitespace-pre-wrap">${notice.addressee || 'N/A'}</p>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p class="text-sm text-gray-600">Notice Date</p>
-                                        <p class="font-semibold text-gray-800">${new Date(notice.notice_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-600">Post Date</p>
-                                        <p class="font-semibold text-gray-800">${notice.post_date ? new Date(notice.post_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p class="text-sm text-gray-600">Section</p>
-                                        <p class="font-semibold text-gray-800">${notice.section}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-600">Act</p>
-                                        <p class="font-semibold text-gray-800">${notice.act}</p>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p class="text-sm text-gray-600">Due Date</p>
-                                        <p class="font-semibold text-gray-800">${new Date(notice.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-600">Days Left</p>
-                                        <p class="font-semibold ${isOverdue ? 'text-red-600' : 'text-blue-600'}">${isOverdue ? 'Overdue by ' + Math.abs(daysLeft) + ' days' : daysLeft + ' days'}</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Status</p>
-                                    <p class="font-semibold text-gray-800">${notice.status === 'closed' ? 'Closed' : 'Open'}</p>
-                                    ${notice.closed_date ? `<p class="text-xs text-gray-500">Closed on: ${new Date(notice.closed_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>` : ''}
-                                </div>
-                                ${notice.input_data ? `
-                                    <div>
-                                        <p class="text-sm text-gray-600">Additional Input</p>
-                                        <p class="text-gray-800 whitespace-pre-wrap">${notice.input_data}</p>
-                                    </div>
-                                ` : ''}
-                                <div class="border-t border-gray-300 pt-4">
-                                    ${remarksHtml}
-                                </div>
-                            </div>
-                        `;
+        fetch(baseUrl + "get-notice-details.php?id=" + noticeId)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var notice = data.notice;
+                    var remarks = data.remarks || [];
+                    var html = '<div class="space-y-4"><div><p class="text-sm text-gray-600">Notice ID</p><p class="font-mono text-blue-600 font-semibold">' + notice.unique_notice_id + '</p></div>';
+                    html += '<div><p class="text-sm text-gray-600">Client</p><p class="font-semibold text-gray-800">' + notice.client_name + '</p></div>';
+                    html += '<div><p class="text-sm text-gray-600">Addressee</p><p class="text-gray-800 whitespace-pre-wrap">' + (notice.addressee || "N/A") + '</p></div>';
+                    
+                    var daysLeft = Math.ceil((new Date(notice.due_date) - new Date()) / (1000 * 60 * 60 * 24));
+                    var isOverdue = daysLeft < 0;
+                    var daysText = isOverdue ? "Overdue by " + Math.abs(daysLeft) + " days" : daysLeft + " days";
+                    var daysClass = isOverdue ? "text-red-600" : "text-blue-600";
+                    
+                    html += '<div class="grid grid-cols-2 gap-4"><div><p class="text-sm text-gray-600">Due Date</p><p class="font-semibold text-gray-800">' + new Date(notice.due_date).toLocaleDateString("en-US", {year:"numeric",month:"short",day:"numeric"}) + '</p></div>';
+                    html += '<div><p class="text-sm text-gray-600">Days Left</p><p class="font-semibold ' + daysClass + '">' + daysText + '</p></div></div>';
+                    
+                    html += '<div><p class="text-sm text-gray-600">Status</p><p class="font-semibold text-gray-800">' + (notice.status === "closed" ? "Closed" : "Open") + '</p></div>';
+                    
+                    html += '<div class="border-t border-gray-300 pt-4"><h3 class="text-lg font-bold text-gray-800 mb-3">Remarks History</h3><div class="space-y-3">';
+                    if (remarks.length > 0) {
+                        remarks.forEach(function(remark) {
+                            html += '<div class="border border-gray-300 rounded-lg p-3 bg-gray-50"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-blue-600">' + (remark.created_by || "User") + '</span><span class="text-xs text-gray-500">' + new Date(remark.created_at).toLocaleDateString("en-US", {year:"numeric",month:"short",day:"numeric"}) + '</span></div><p class="text-sm text-gray-700">' + remark.remark + '</p></div>';
+                        });
                     } else {
-                        modalContent.innerHTML = '<p class="text-red-600">Error loading notice details</p>';
+                        html += '<p class="text-sm text-gray-500">No remarks yet</p>';
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
+                    html += '</div></div></div>';
+                    modalContent.innerHTML = html;
+                } else {
                     modalContent.innerHTML = '<p class="text-red-600">Error loading notice details</p>';
-                });
-            
-            modal.classList.remove('hidden');
-        }
-
-        function addRemark(noticeId) {
-            document.getElementById('noticeIdInput').value = noticeId;
-            document.getElementById('updateStageModal').classList.remove('hidden');
-        }
-
-        function closeNotice(noticeId) {
-            document.getElementById('closeNoticeIdInput').value = noticeId;
-            document.getElementById('closeNoticeModal').classList.remove('hidden');
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
-        }
-
-        // Handle add remark form submission
-        document.getElementById('updateStageForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            fetch('add-notice-remark.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Remark added successfully');
-                    closeModal('updateStageModal');
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Failed to add remark'));
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error adding remark');
-            });
-        });
+            .catch(function(e) { modalContent.innerHTML = '<p class="text-red-600">Error loading notice details</p>'; });
+    };
 
-        // Handle close notice form submission
-        document.getElementById('closeNoticeForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            fetch('close-notice.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Notice closed successfully');
-                    closeModal('closeNoticeModal');
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Failed to close notice'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error closing notice');
-            });
-        });
+    window.addRemark = function(id) {
+        document.getElementById("noticeIdInput").value = id;
+        document.getElementById("updateStageModal").classList.remove("hidden");
+    };
 
-        function deleteNotice(noticeId) {
-            if (confirm('Are you sure you want to delete this notice?')) {
-                fetch('delete-notice.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: 'notice_id=' + noticeId
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Notice deleted successfully');
-                        location.reload();
-                    } else {
-                        alert('Error: ' + (data.message || 'Failed to delete notice'));
+    window.closeNotice = function(id) {
+        document.getElementById("closeNoticeIdInput").value = id;
+        document.getElementById("closeNoticeModal").classList.remove("hidden");
+    };
+
+    window.closeModal = function(id) {
+        document.getElementById(id).classList.add("hidden");
+    };
+
+    window.deleteNotice = function(id) {
+        if (confirm("Are you sure?")) {
+            fetch(baseUrl + "delete-notice.php", {method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body:"notice_id=" + id})
+                .then(function(r) { return r.json(); })
+                .then(function(d) { if (d.success) { alert("Deleted"); location.reload(); } else { alert("Error: " + d.message); } })
+                .catch(function(e) { alert("Error"); });
+        }
+    };
+
+    window.clearFilters = function() {
+        document.getElementById("searchInput").value = "";
+        document.getElementById("statusFilter").value = "";
+        document.getElementById("recordsPerPage").value = "10";
+        if (table) { table.search("").page.len(10).draw(); }
+    };
+
+    window.printNotices = function() {
+        window.open(baseUrl + "print-notices.php", "_blank", "width=1200,height=800");
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof jQuery !== "undefined") {
+            jQuery(document).ready(function($) {
+                table = $("#noticesTable").DataTable({pageLength:10, lengthMenu:[[10,25,50,100,-1],[10,25,50,100,"All"]], paging:true, searching:true, ordering:true, info:true, autoWidth:false});
+                $("#recordsPerPage").on("change", function() { var v = jQuery(this).val(); table.page.len(v == -1 ? -1 : parseInt(v)).draw(); });
+                $("#statusFilter").on("change", function() { 
+                    var s = document.getElementById("statusFilter").value;
+                    $.fn.dataTable.ext.search.pop();
+                    if (s) {
+                        $.fn.dataTable.ext.search.push(function(st, d, i) {
+                            var row = table.row(i).node();
+                            return jQuery(row).data("status") === s;
+                        });
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error deleting notice');
+                    table.draw();
                 });
-            }
+                $("#searchInput").on("keyup", function() { table.search(jQuery(this).val()).draw(); });
+            });
         }
 
-        // Print notices function
-        function printNotices() {
-            const table = document.getElementById('noticesTable');
-            const printWindow = window.open('', '', 'height=800,width=1200');
-            printWindow.document.write('<html><head><title>Notices Report</title>');
-            printWindow.document.write('<style>');
-            printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
-            printWindow.document.write('h2 { color: #1f2937; text-align: center; margin-bottom: 20px; }');
-            printWindow.document.write('table { border-collapse: collapse; width: 100%; margin-top: 20px; }');
-            printWindow.document.write('th { background-color: #3b82f6; color: white; padding: 12px; text-align: left; border: 1px solid #ddd; }');
-            printWindow.document.write('td { padding: 10px; border: 1px solid #ddd; }');
-            printWindow.document.write('tr:nth-child(even) { background-color: #f9fafb; }');
-            printWindow.document.write('tr:hover { background-color: #f3f4f6; }');
-            printWindow.document.write('.status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }');
-            printWindow.document.write('.status-open { background-color: #dbeafe; color: #1e40af; }');
-            printWindow.document.write('.status-closed { background-color: #f3f4f6; color: #1f2937; }');
-            printWindow.document.write('@media print { body { margin: 0; } }');
-            printWindow.document.write('</style></head><body>');
-            printWindow.document.write('<h2>Notices Report</h2>');
-            
-            // Create a copy of the table for printing
-            const tableClone = table.cloneNode(true);
-            
-            // Format the table for printing
-            const rows = tableClone.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                // Remove action column (last column)
-                const cells = row.querySelectorAll('td');
-                if (cells.length > 0) {
-                    cells[cells.length - 1].remove();
-                }
-            });
-            
-            // Remove action column header
-            const headerCells = tableClone.querySelectorAll('thead th');
-            if (headerCells.length > 0) {
-                headerCells[headerCells.length - 1].remove();
-            }
-            
-            // Apply inline styles to table
-            tableClone.style.cssText = 'width: 100%; border-collapse: collapse;';
-            
-            printWindow.document.write(tableClone.outerHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.print();
-        }
+        document.getElementById("updateStageForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            fetch(baseUrl + "add-notice-remark.php", {method:"POST", body:new FormData(this)})
+                .then(function(r) { return r.json(); })
+                .then(function(d) { if (d.success) { alert("Added"); closeModal("updateStageModal"); location.reload(); } else { alert("Error"); } })
+                .catch(function(e) { alert("Error"); });
+        });
+
+        document.getElementById("closeNoticeForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            fetch(baseUrl + "close-notice.php", {method:"POST", body:new FormData(this)})
+                .then(function(r) { return r.json(); })
+                .then(function(d) { if (d.success) { alert("Closed"); closeModal("closeNoticeModal"); location.reload(); } else { alert("Error"); } })
+                .catch(function(e) { alert("Error"); });
+        });
+    });
     </script>
 </body>
 
