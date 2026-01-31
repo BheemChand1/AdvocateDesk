@@ -55,9 +55,13 @@ $query = "SELECT
         ''
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('complainant', 'decree_holder') THEN name 
+    END SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
     END SEPARATOR ', ') 
-    FROM case_parties WHERE case_id = c.id) as accused_opposite_party,
+    FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
     previous.update_date as previous_position_date,
@@ -429,6 +433,19 @@ if (count($typesToExport) === 1) {
         
         $filing_date_formatted = $case['filing_date'] ? date('d M, Y', strtotime($case['filing_date'])) : 'N/A';
         
+        // Format accused/opposite party with plaintiff vs defendant
+        $plaintiffs = $case['plaintiff_parties'] ?? '';
+        $defendants = $case['defendant_parties'] ?? '';
+        if ($plaintiffs && $defendants) {
+            $accused_opposite = $plaintiffs . ' vs ' . $defendants;
+        } elseif ($plaintiffs) {
+            $accused_opposite = $plaintiffs;
+        } elseif ($defendants) {
+            $accused_opposite = $defendants;
+        } else {
+            $accused_opposite = 'N/A';
+        }
+        
         $row = [
             $case['unique_case_id'] ?? 'N/A',
             $prev_date_formatted,
@@ -436,7 +453,7 @@ if (count($typesToExport) === 1) {
             $case['court_name'] ?? 'N/A',
             $case['customer_name'] ?? 'N/A',
             $case['mobile'] ?? 'N/A',
-            $case['accused_opposite_party'] ?? 'N/A',
+            $accused_opposite,
             $case['cnr_number'] ?? 'N/A',
             $filing_date_formatted,
             $display_date_formatted,
@@ -587,6 +604,19 @@ if (count($typesToExport) === 1) {
             
             $filing_date_formatted = $case['filing_date'] ? date('d M, Y', strtotime($case['filing_date'])) : 'N/A';
             
+            // Format accused/opposite party with plaintiff vs defendant
+            $plaintiffs = $case['plaintiff_parties'] ?? '';
+            $defendants = $case['defendant_parties'] ?? '';
+            if ($plaintiffs && $defendants) {
+                $accused_opposite = $plaintiffs . ' vs ' . $defendants;
+            } elseif ($plaintiffs) {
+                $accused_opposite = $plaintiffs;
+            } elseif ($defendants) {
+                $accused_opposite = $defendants;
+            } else {
+                $accused_opposite = 'N/A';
+            }
+            
             $row = [
                 $case['unique_case_id'] ?? 'N/A',
                 $prev_date_formatted,
@@ -594,7 +624,7 @@ if (count($typesToExport) === 1) {
                 $case['court_name'] ?? 'N/A',
                 $case['customer_name'] ?? 'N/A',
                 $case['mobile'] ?? 'N/A',
-                $case['accused_opposite_party'] ?? 'N/A',
+                $accused_opposite,
                 $case['cnr_number'] ?? 'N/A',
                 $filing_date_formatted,
                 $display_date_formatted,

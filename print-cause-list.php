@@ -52,9 +52,13 @@ $query = "SELECT
         ''
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('complainant', 'decree_holder') THEN name 
+    END SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
     END SEPARATOR ', ') 
-    FROM case_parties WHERE case_id = c.id) as accused_opposite_party,
+    FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
     previous.update_date as previous_position_date,
@@ -306,7 +310,19 @@ tr {
 <td><?= htmlspecialchars($c['case_no'] ?? 'N/A') ?></td>
 <td><?= htmlspecialchars($c['court_name'] ?? 'N/A') ?></td>
 <td><?= htmlspecialchars($c['customer_name']) ?><br><small><?= $c['mobile'] ?></small></td>
-<td><?= htmlspecialchars($c['accused_opposite_party'] ?? 'N/A') ?></td>
+<td><?php 
+$plaintiffs = htmlspecialchars($c['plaintiff_parties'] ?? '');
+$defendants = htmlspecialchars($c['defendant_parties'] ?? '');
+if ($plaintiffs && $defendants) {
+    echo $plaintiffs . ' <strong>vs</strong> ' . $defendants;
+} elseif ($plaintiffs) {
+    echo $plaintiffs;
+} elseif ($defendants) {
+    echo $defendants;
+} else {
+    echo 'N/A';
+}
+?></td>
 <td><?= htmlspecialchars($c['cnr_number'] ?? 'N/A') ?></td>
 <td><?= date('d M Y', strtotime($c['latest_position_date'] ?? $c['filing_date'])) ?></td>
 <td><?= ucwords(str_replace('-', ' ', $c['case_type'])) ?></td>
