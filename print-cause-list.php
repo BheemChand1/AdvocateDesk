@@ -117,11 +117,11 @@ if ($status_filter) {
 }
 
 if ($from_date) {
-    $query .= " AND COALESCE(latest.update_date, filing_date) >= '" . mysqli_real_escape_string($conn, $from_date) . "'";
+    $query .= " AND COALESCE(latest.update_date, ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date) >= '" . mysqli_real_escape_string($conn, $from_date) . "'";
 }
 
 if ($to_date) {
-    $query .= " AND COALESCE(latest.update_date, filing_date) <= '" . mysqli_real_escape_string($conn, $to_date) . "'";
+    $query .= " AND COALESCE(latest.update_date, ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date) <= '" . mysqli_real_escape_string($conn, $to_date) . "'";
 }
 
 if ($priority_filter !== '') {
