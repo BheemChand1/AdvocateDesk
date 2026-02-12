@@ -91,14 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $branch_name = mysqli_real_escape_string($conn, $_POST['branch_name'] ?? '');
     $region = mysqli_real_escape_string($conn, $_POST['region'] ?? '');
     $complainant_authorised_person = mysqli_real_escape_string($conn, $_POST['complainant_authorised_person'] ?? '');
-    $status = mysqli_real_escape_string($conn, $_POST['status'] ?? 'pending');
-    $case_stage_id = (!empty($_POST['case_stage_id'])) ? intval($_POST['case_stage_id']) : NULL;
 
     $update_sql = "UPDATE cases SET cnr_number = '$cnr_number', loan_number = '$loan_number', 
                   product = '$product', branch_name = '$branch_name', region = '$region', 
-                  complainant_authorised_person = '$complainant_authorised_person', 
-                  status = '$status'" . ($case_stage_id !== NULL ? ", case_stage_id = $case_stage_id" : "") . 
-                  " WHERE id = $case_id";
+                  complainant_authorised_person = '$complainant_authorised_person' 
+                  WHERE id = $case_id";
 
     if (mysqli_query($conn, $update_sql)) {
         // Update CONSUMER_CIVIL specific details
@@ -411,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <input type="text" name="case_vs_law_act" value="<?php echo htmlspecialchars($case_details['case_vs_law_act'] ?? ''); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter case v/s with relevant law/act">
                                 </div>
                                 <div>
-                                    <label class="block text-gray-700 text-sm font-semibold mb-1">SWT Value</label>
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Suit Value</label>
                                     <input type="text" name="swt_value" value="<?php echo htmlspecialchars($case_details['swt_value'] ?? ''); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter SWT value">
                                 </div>
                             </div>
@@ -528,33 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
 
-                    <!-- Case Status -->
-                    <div class="mb-6">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                            <i class="fas fa-tasks text-blue-500 mr-2"></i>Case Status
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Case Status</label>
-                                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="pending" <?php echo ($case['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="active" <?php echo ($case['status'] ?? '') === 'active' ? 'selected' : ''; ?>>Active</option>
-                                    <option value="closed" <?php echo ($case['status'] ?? '') === 'closed' ? 'selected' : ''; ?>>Closed</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Case Stage</label>
-                                <select name="case_stage_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Select a stage</option>
-                                    <?php foreach ($stages as $stage): ?>
-                                    <option value="<?php echo $stage['id']; ?>" <?php echo $case['case_stage_id'] == $stage['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($stage['stage_name']); ?>
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+
 
                     <!-- Fee Grid -->
                     <div class="mb-6">

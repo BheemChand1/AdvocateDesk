@@ -208,7 +208,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                 <input type="text" name="case_no" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter case number">
                             </div>
                             <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Court No</label>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">Court Name</label>
                                 <input type="text" name="court_no" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter court number">
                             </div>
                             <div>

@@ -265,7 +265,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                             <i class="fas fa-rupee-sign text-green-600 text-lg"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500 mb-1">SWT Value</p>
+                            <p class="text-sm text-gray-500 mb-1">Suit Value</p>
                             <p class="text-lg font-bold text-green-600">₹<?php echo htmlspecialchars($case_details['swt_value'] ?? '-'); ?></p>
                         </div>
                     </div>

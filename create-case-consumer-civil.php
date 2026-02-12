@@ -192,7 +192,7 @@ $client_id = isset($_GET['client_id']) ? intval($_GET['client_id']) : null;
                                     <input type="text" name="case_vs_law_act" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter case v/s with relevant law/act">
                                 </div>
                                 <div>
-                                    <label class="block text-gray-700 text-sm font-semibold mb-1">SWT Value</label>
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Suit Value</label>
                                     <input type="text" name="swt_value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter SWT value">
                                 </div>
                             </div>

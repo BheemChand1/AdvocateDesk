@@ -133,6 +133,17 @@ while ($row = mysqli_fetch_assoc($result)) {
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- CNR Number -->
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-barcode text-red-600 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">CNR Number</p>
+                            <p class="text-lg font-bold text-gray-800 font-mono"><?php echo htmlspecialchars($case['cnr_number'] ?? '-'); ?></p>
+                        </div>
+                    </div>
+
                     <!-- Loan Number -->
                     <div class="flex items-start">
                         <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
@@ -254,7 +265,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                             <i class="fas fa-building text-indigo-600 text-lg"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500 mb-1">Court Number</p>
+                            <p class="text-sm text-gray-500 mb-1">Court Name</p>
                             <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_no'] ?? '-'); ?></p>
                         </div>
                     </div>

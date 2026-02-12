@@ -53,11 +53,11 @@ $query = "SELECT
         ni.court_name,
         cr.court_name,
         cc.court_name,
-        '',
-        ''
+        ep.court_no,
+        ao.court_no
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
-        WHEN party_type IN ('complainant', 'decree_holder') THEN name 
+        WHEN party_type IN ('complainant', 'decree_holder', 'plaintiff') THEN name 
     END SEPARATOR ', ') 
     FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
     (SELECT GROUP_CONCAT(DISTINCT CASE 

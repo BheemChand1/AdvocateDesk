@@ -84,22 +84,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $region = mysqli_real_escape_string($conn, $_POST['region'] ?? '');
     $filing_amount = !empty($_POST['filing_amount']) ? floatval($_POST['filing_amount']) : 0;
     $complainant_authorised_person = mysqli_real_escape_string($conn, $_POST['complainant_authorised_person'] ?? '');
-    $status = mysqli_real_escape_string($conn, $_POST['status'] ?? 'pending');
-    $case_stage_id = (!empty($_POST['case_stage_id'])) ? intval($_POST['case_stage_id']) : NULL;
 
     $update_sql = "UPDATE cases SET cnr_number = '$cnr_number', loan_number = '$loan_number', 
                   product = '$product', branch_name = '$branch_name', location = '$location', 
-                  region = '$region', complainant_authorised_person = '$complainant_authorised_person', 
-                  status = '$status'" . ($case_stage_id !== NULL ? ", case_stage_id = $case_stage_id" : "") . 
-                  " WHERE id = $case_id";
+                  region = '$region', complainant_authorised_person = '$complainant_authorised_person' 
+                  WHERE id = $case_id";
 
     if (mysqli_query($conn, $update_sql)) {
         // Update ARBITRATION_OTHER specific details
-        $plaintiff_name = mysqli_real_escape_string($conn, $_POST['plaintiff_name'] ?? '');
-        $plaintiff_address = mysqli_real_escape_string($conn, $_POST['plaintiff_address'] ?? '');
-        $defendant_name = mysqli_real_escape_string($conn, $_POST['defendant_name'] ?? '');
-        $defendant_address = mysqli_real_escape_string($conn, $_POST['defendant_address'] ?? '');
-        $customer_name = mysqli_real_escape_string($conn, $_POST['customer_name'] ?? '');
         $filing_date = mysqli_real_escape_string($conn, $_POST['filing_date'] ?? '');
         $filing_location = mysqli_real_escape_string($conn, $_POST['filing_location'] ?? '');
         $case_no = mysqli_real_escape_string($conn, $_POST['case_no'] ?? '');
@@ -110,22 +102,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($case_details) {
             // Update existing details
-            $details_sql = "UPDATE case_arbitration_other_details SET plaintiff_name = '$plaintiff_name',
-                           plaintiff_address = '$plaintiff_address', defendant_name = '$defendant_name',
-                           defendant_address = '$defendant_address', customer_name = '$customer_name',
-                           filing_date = '$filing_date', filing_location = '$filing_location', case_no = '$case_no',
+            $details_sql = "UPDATE case_arbitration_other_details SET filing_date = '$filing_date',
+                           filing_location = '$filing_location', case_no = '$case_no',
                            court_no = '$court_no', advocate = '$advocate', poa = '$poa',
                            remarks_feedback_trails = '$remarks_feedback_trails'
                            WHERE case_id = $case_id";
         } else {
             // Insert new details
-            $details_sql = "INSERT INTO case_arbitration_other_details (case_id, plaintiff_name,
-                           plaintiff_address, defendant_name, defendant_address, customer_name,
-                           filing_date, filing_location, case_no, court_no, advocate, poa,
+            $details_sql = "INSERT INTO case_arbitration_other_details (case_id, filing_date,
+                           filing_location, case_no, court_no, advocate, poa,
                            remarks_feedback_trails)
-                           VALUES ($case_id, '$plaintiff_name', '$plaintiff_address', '$defendant_name',
-                           '$defendant_address', '$customer_name', '$filing_date', '$filing_location',
-                           '$case_no', '$court_no', '$advocate', '$poa', '$remarks_feedback_trails')";
+                           VALUES ($case_id, '$filing_date', '$filing_location', '$case_no',
+                           '$court_no', '$advocate', '$poa', '$remarks_feedback_trails')";
         }
 
         if (mysqli_query($conn, $details_sql)) {
@@ -479,7 +467,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="text" name="case_no" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($case_details['case_no'] ?? ''); ?>">
                             </div>
                             <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Court No</label>
+                                <label class="block text-gray-700 text-sm font-semibold mb-1">Court Name</label>
                                 <input type="text" name="court_no" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($case_details['court_no'] ?? ''); ?>">
                             </div>
                             <div>
@@ -489,33 +477,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">POA</label>
                                 <input type="text" name="poa" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?php echo htmlspecialchars($case_details['poa'] ?? ''); ?>">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Case Status -->
-                    <div class="mb-6 bg-yellow-50 border border-yellow-300 rounded-lg p-4">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-tasks text-yellow-600 mr-2"></i>Case Status</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Status</label>
-                                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                                    <option value="pending" <?php echo ($case['status'] === 'pending') ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="in_progress" <?php echo ($case['status'] === 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
-                                    <option value="resolved" <?php echo ($case['status'] === 'resolved') ? 'selected' : ''; ?>>Resolved</option>
-                                    <option value="closed" <?php echo ($case['status'] === 'closed') ? 'selected' : ''; ?>>Closed</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Case Stage</label>
-                                <select name="case_stage_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                                    <option value="">Select Stage</option>
-                                    <?php foreach ($stages as $stage): ?>
-                                    <option value="<?php echo $stage['id']; ?>" <?php echo ($case['case_stage_id'] == $stage['id']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($stage['stage_name']); ?>
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
                             </div>
                         </div>
                     </div>
@@ -662,12 +623,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 `;
                 container.appendChild(newRow);
-                
-                // Add remove functionality
-                newRow.querySelector('.remove-plaintiff').addEventListener('click', function(e) {
-                    e.preventDefault();
-                    newRow.remove();
-                });
             });
 
             // Add More Defendant Functionality
@@ -692,28 +647,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 `;
                 container.appendChild(newRow);
-                
-                // Add remove functionality
-                newRow.querySelector('.remove-defendant').addEventListener('click', function(e) {
-                    e.preventDefault();
-                    newRow.remove();
-                });
             });
 
-            // Add remove functionality to existing plaintiff rows
-            document.querySelectorAll('.remove-plaintiff').forEach(button => {
-                button.addEventListener('click', function(e) {
+            // Event delegation for remove buttons - Plaintiff
+            document.getElementById('additionalPlaintiffs').addEventListener('click', function(e) {
+                if (e.target.closest('.remove-plaintiff')) {
                     e.preventDefault();
-                    this.closest('div').remove();
-                });
+                    e.target.closest('div').parentElement.remove();
+                }
             });
 
-            // Add remove functionality to existing defendant rows
-            document.querySelectorAll('.remove-defendant').forEach(button => {
-                button.addEventListener('click', function(e) {
+            // Event delegation for remove buttons - Defendant
+            document.getElementById('additionalDefendants').addEventListener('click', function(e) {
+                if (e.target.closest('.remove-defendant')) {
                     e.preventDefault();
-                    this.closest('div').remove();
-                });
+                    e.target.closest('div').parentElement.remove();
+                }
             });
 
             // Add More Fee Functionality
@@ -733,19 +682,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </td>
                 `;
                 tbody.appendChild(newRow);
-                
-                newRow.querySelector('.remove-fee').addEventListener('click', function(e) {
-                    e.preventDefault();
-                    newRow.remove();
-                });
             });
 
-            // Remove Fee Functionality
-            document.querySelectorAll('.remove-fee').forEach(button => {
-                button.addEventListener('click', function(e) {
+            // Event delegation for remove fee buttons
+            document.getElementById('feeGridBody').addEventListener('click', function(e) {
+                if (e.target.closest('.remove-fee')) {
                     e.preventDefault();
-                    this.closest('tr').remove();
-                });
+                    e.target.closest('tr').remove();
+                }
             });
         });
     </script>
