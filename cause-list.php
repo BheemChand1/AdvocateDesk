@@ -58,11 +58,11 @@ $query = "SELECT
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('complainant', 'decree_holder', 'plaintiff') THEN name 
-    END SEPARATOR ', ') 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
     FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
-    END SEPARATOR ', ') 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
     FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
@@ -111,7 +111,8 @@ if (!empty($search_query)) {
                OR c.unique_case_id LIKE '" . $search_term . "'
                OR cl.name LIKE '" . $search_term . "'
                OR cp.name LIKE '" . $search_term . "'
-               OR c.cnr_number LIKE '" . $search_term . "')";
+               OR c.cnr_number LIKE '" . $search_term . "'
+               OR COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '" . $search_term . "')";
 }
 
 // Apply filters
@@ -143,8 +144,14 @@ if ($priority_filter !== '') {
 // Add GROUP BY clause to properly aggregate data
 $query .= " GROUP BY c.id";
 
-// Order by latest position update date if exists, otherwise by filing date (most recent first)
-$query .= " ORDER BY COALESCE(latest.update_date, COALESCE(
+// Order by latest position update date if exists, otherwise by filing date (today first, then backwards)
+$query .= " ORDER BY CASE WHEN COALESCE(latest.update_date, COALESCE(
+    ni.filing_date,
+    cr.filing_date,
+    cc.case_filling_date,
+    ep.date_of_filing,
+    ao.filing_date
+)) > CURDATE() THEN 1 ELSE 0 END ASC, COALESCE(latest.update_date, COALESCE(
     ni.filing_date,
     cr.filing_date,
     cc.case_filling_date,
@@ -192,7 +199,8 @@ if (!empty($search_query)) {
     $count_query .= " AND (c.loan_number LIKE '" . $search_term . "'
                OR c.unique_case_id LIKE '" . $search_term . "'
                OR cl.name LIKE '" . $search_term . "'
-               OR c.cnr_number LIKE '" . $search_term . "')";
+               OR c.cnr_number LIKE '" . $search_term . "'
+               OR COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '" . $search_term . "')";
 }
 
 if (!empty($case_type_filter)) {
@@ -316,7 +324,7 @@ if ($stages_result) {
                         <label class="block text-gray-700 text-sm font-semibold mb-2">Search Cases</label>
                         <div class="flex gap-2">
                             <div class="flex-1 relative">
-                                <input type="text" name="search" placeholder="Search by loan number, case ID, customer name, party name, or CNR number..."
+                                <input type="text" name="search" placeholder="Search by loan number, case ID, case no., customer name, party name, or CNR number..."
                                     value="<?php echo htmlspecialchars($search_query); ?>"
                                     class="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>

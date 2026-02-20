@@ -144,6 +144,17 @@ while ($row = mysqli_fetch_assoc($result)) {
                         </div>
                     </div>
 
+                    <!-- Loan Number -->
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-hashtag text-orange-600 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">Loan Number</p>
+                            <p class="text-lg font-bold text-gray-800 font-mono"><?php echo htmlspecialchars($case['loan_number'] ?? '-'); ?></p>
+                        </div>
+                    </div>
+
                     <!-- Customer Name -->
                     <div class="flex items-start">
                         <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">

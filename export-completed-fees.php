@@ -32,9 +32,14 @@ SELECT
         ao.case_no
     ) as case_no,
     cl.name as client_name,
-    GROUP_CONCAT(DISTINCT CASE 
-        WHEN cp.party_type IN ('accused', 'defendant') THEN cp.name 
-    END SEPARATOR ', ') as accused_opposite_party,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('complainant', 'decree_holder', 'plaintiff') THEN name 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('accused', 'defendant') THEN name 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as defendant_parties,
     cpu.fee_amount,
     cpu.position as fee_name,
     cpu.update_date
@@ -119,7 +124,18 @@ foreach ($completed_accounts as $case) {
         $case['case_no'] ?? 'N/A',
         $case['cnr_number'] ?? 'N/A',
         $case['client_name'] ?? 'N/A',
-        $case['accused_opposite_party'] ?? 'N/A',
+        (function() use ($case) {
+            $plaintiffs = $case['plaintiff_parties'] ?? '';
+            $defendants = $case['defendant_parties'] ?? '';
+            if ($plaintiffs && $defendants) {
+                return $plaintiffs . ' vs ' . $defendants;
+            } elseif ($plaintiffs) {
+                return $plaintiffs;
+            } elseif ($defendants) {
+                return $defendants;
+            }
+            return 'N/A';
+        })(),
         $case['case_type'] ?? 'N/A',
         $case['bill_number'] ?? 'N/A',
         $case['bill_date'] ?? 'N/A',

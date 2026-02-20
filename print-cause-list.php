@@ -53,11 +53,11 @@ $query = "SELECT
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('complainant', 'decree_holder', 'plaintiff') THEN name 
-    END SEPARATOR ', ') 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
     FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
-    END SEPARATOR ', ') 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
     FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
@@ -104,7 +104,9 @@ if (!empty($search_query)) {
         c.loan_number LIKE '$search' OR
         c.unique_case_id LIKE '$search' OR
         cl.name LIKE '$search' OR
-        c.cnr_number LIKE '$search'
+        c.cnr_number LIKE '$search' OR
+        COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '$search' OR
+        EXISTS (SELECT 1 FROM case_parties WHERE case_id = c.id AND name LIKE '$search')
     )";
 }
 
@@ -129,7 +131,7 @@ if ($priority_filter !== '') {
 }
 
 $query .= " GROUP BY c.id
-ORDER BY COALESCE(latest.update_date, COALESCE(ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date)) DESC";
+ORDER BY CASE WHEN COALESCE(latest.update_date, COALESCE(ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date)) > CURDATE() THEN 1 ELSE 0 END ASC, COALESCE(latest.update_date, COALESCE(ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date)) DESC";
 
 $result = mysqli_query($conn, $query);
 $cases = [];

@@ -22,6 +22,16 @@ if (mysqli_num_rows($result) === 0) {
 // Get search parameter
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 
+// Pagination settings
+$entries_per_page_param = isset($_GET['entries_per_page']) ? $_GET['entries_per_page'] : '25';
+if ($entries_per_page_param === 'all') {
+    $entries_per_page = 999999; // Large number to show all
+} else {
+    $entries_per_page = intval($entries_per_page_param);
+}
+$current_page = isset($_GET['page']) ? intval($_GET['page']) : 1;
+if ($current_page < 1) $current_page = 1;
+
 // Fetch completed fees (show only fees with completed payment status from case_position_updates)
 $completed_sql = "
 SELECT 
@@ -42,9 +52,14 @@ SELECT
         ao.case_no
     ) as case_no,
     cl.name as client_name,
-    GROUP_CONCAT(DISTINCT CASE 
-        WHEN cp.party_type IN ('accused', 'defendant') THEN cp.name 
-    END SEPARATOR ', ') as accused_opposite_party,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('complainant', 'decree_holder', 'plaintiff') THEN name 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('accused', 'defendant') THEN name 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as defendant_parties,
     cpu.fee_amount,
     cpu.position as fee_name,
     cpu.update_date
@@ -75,6 +90,27 @@ $completed_sql .= "
 GROUP BY cpu.id
 ORDER BY cpu.completed_date DESC, cpu.update_date DESC
 ";
+
+// Get total count - use subquery to count grouped results
+$grouped_query = explode('LIMIT', $completed_sql)[0]; // Remove LIMIT/OFFSET
+$count_query = 'SELECT COUNT(*) as total FROM (' . $grouped_query . ') as grouped_subquery';
+$count_result = mysqli_query($conn, $count_query);
+$total_cases = 0;
+if ($count_result) {
+    $count_row = mysqli_fetch_assoc($count_result);
+    $total_cases = $count_row['total'];
+}
+
+// Calculate pagination
+$total_pages = ceil($total_cases / $entries_per_page);
+if ($current_page > $total_pages && $total_pages > 0) {
+    $current_page = $total_pages;
+}
+
+$offset = ($current_page - 1) * $entries_per_page;
+
+// Add LIMIT and OFFSET to main query
+$completed_sql .= " LIMIT " . intval($entries_per_page) . " OFFSET " . intval($offset);
 
 $completed_result = mysqli_query($conn, $completed_sql);
 $completed_accounts = [];
@@ -163,16 +199,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <h2 class="text-xl font-bold text-gray-800">
                                 <i class="fas fa-check-circle text-green-600 mr-2"></i>Completed Fees List
                             </h2>
-                            <p class="text-gray-600 text-sm mt-1">Total Completed Cases: <strong><?php echo count($completed_accounts); ?></strong></p>
+                            <p class="text-gray-600 text-sm mt-1">Total Completed Cases: <strong><?php echo $total_cases; ?></strong></p>
                         </div>
                         <div>
                             <label class="text-gray-700 text-sm font-semibold mr-2">Show Entries:</label>
-                            <select id="entriesPerPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                                <option value="10">10</option>
-                                <option value="25" selected>25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                                <option value="all">Show All</option>
+                            <select id="entriesPerPage" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" onchange="changeEntriesPerPage(this.value)">
+                                <option value="10" <?php echo $entries_per_page_param == 10 ? 'selected' : ''; ?>>10</option>
+                                <option value="25" <?php echo $entries_per_page_param == 25 ? 'selected' : ''; ?>>25</option>
+                                <option value="50" <?php echo $entries_per_page_param == 50 ? 'selected' : ''; ?>>50</option>
+                                <option value="100" <?php echo $entries_per_page_param == 100 ? 'selected' : ''; ?>>100</option>
+                                <option value="all" <?php echo $entries_per_page_param === 'all' ? 'selected' : ''; ?>>All</option>
                             </select>
                         </div>
                     </div>
@@ -245,7 +281,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['case_no'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['cnr_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['client_name']); ?></td>
-                                        <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['accused_opposite_party'] ?? 'N/A'); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700">
+                                            <?php 
+                                            $plaintiffs = htmlspecialchars($account['plaintiff_parties'] ?? '');
+                                            $defendants = htmlspecialchars($account['defendant_parties'] ?? '');
+                                            
+                                            if ($plaintiffs && $defendants) {
+                                                echo $plaintiffs . ' <span class="font-semibold text-blue-600">vs</span> ' . $defendants;
+                                            } elseif ($plaintiffs) {
+                                                echo $plaintiffs;
+                                            } elseif ($defendants) {
+                                                echo $defendants;
+                                            } else {
+                                                echo 'N/A';
+                                            }
+                                            ?>
+                                        </td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['case_type']); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['bill_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($account['bill_date'] ?? 'N/A'); ?></td>
@@ -285,18 +336,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <!-- Pagination -->
                     <div class="p-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div class="text-sm text-gray-600">
-                            Showing <span id="startEntry">1</span> to <span id="endEntry">25</span> of <span id="totalEntries"><?php echo count($completed_accounts); ?></span> entries
+                            Showing <span id="startEntry"><?php echo $total_cases > 0 ? ($offset + 1) : 0; ?></span> to <span id="endEntry"><?php echo min($offset + $entries_per_page, $total_cases); ?></span> of <span id="totalEntries"><?php echo $total_cases; ?></span> entries
                         </div>
                         <div class="flex items-center space-x-2">
-                            <button onclick="previousPage()" id="prevBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                            <?php 
+                            // Build query string for pagination links
+                            $query_params = [];
+                            if (!empty($search_query)) $query_params['search'] = $search_query;
+                            $query_params['entries_per_page'] = $entries_per_page;
+                            
+                            function build_pagination_url_completed($page_num, $params) {
+                                $params['page'] = $page_num;
+                                return 'completed-fees.php?' . http_build_query($params);
+                            }
+                            ?>
+                            <a href="<?php echo build_pagination_url_completed($current_page - 1, $query_params); ?>" 
+                               class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition <?php echo $current_page === 1 ? 'disabled:opacity-50 disabled:cursor-not-allowed pointer-events-none opacity-50' : ''; ?>">
                                 <i class="fas fa-chevron-left"></i>
-                            </button>
+                            </a>
                             <div id="pageNumbers" class="flex gap-1">
-                                <!-- Page numbers will be added by JavaScript -->
+                                <?php 
+                                // Show first page
+                                if ($total_pages > 0) {
+                                    $btn_class = $current_page === 1 ? 'px-3 py-2 bg-green-500 text-white rounded-lg font-semibold' : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+                                    echo '<a href="' . build_pagination_url_completed(1, $query_params) . '" class="' . $btn_class . '">1</a>';
+                                }
+                                
+                                // Show pages around current page
+                                for ($i = max(2, $current_page - 1); $i <= min($total_pages - 1, $current_page + 1); $i++) {
+                                    $btn_class = $current_page === $i ? 'px-3 py-2 bg-green-500 text-white rounded-lg font-semibold' : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+                                    echo '<a href="' . build_pagination_url_completed($i, $query_params) . '" class="' . $btn_class . '">' . $i . '</a>';
+                                }
+                                
+                                // Show last page
+                                if ($total_pages > 1) {
+                                    $btn_class = $current_page === $total_pages ? 'px-3 py-2 bg-green-500 text-white rounded-lg font-semibold' : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+                                    echo '<a href="' . build_pagination_url_completed($total_pages, $query_params) . '" class="' . $btn_class . '">' . $total_pages . '</a>';
+                                }
+                                ?>
                             </div>
-                            <button onclick="nextPage()" id="nextBtn" class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                            <a href="<?php echo build_pagination_url_completed($current_page + 1, $query_params); ?>" 
+                               class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition <?php echo $current_page === $total_pages || $total_pages === 0 ? 'disabled:opacity-50 disabled:cursor-not-allowed pointer-events-none opacity-50' : ''; ?>">
                                 <i class="fas fa-chevron-right"></i>
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -376,123 +458,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </script>
     
     <script>
-        let currentPage = 1;
-        let entriesPerPage = 25;
-
-        // Initialize pagination on page load
-        window.addEventListener('load', function() {
-            setupPagination();
-        });
-
-        // Handle entries per page change
-        document.getElementById('entriesPerPage').addEventListener('change', function() {
-            entriesPerPage = this.value === 'all' ? document.querySelectorAll('#completedTableBody tr').length : parseInt(this.value);
-            currentPage = 1;
-            updatePagination();
-        });
-
-        function setupPagination() {
-            const totalRows = document.querySelectorAll('#completedTableBody tr').length;
-            document.getElementById('totalEntries').textContent = totalRows;
-            updatePagination();
-        }
-
-        function updatePagination() {
-            const rows = document.querySelectorAll('#completedTableBody tr');
-            const totalRows = rows.length;
-            const totalPages = Math.ceil(totalRows / entriesPerPage);
-
-            // Update row visibility
-            rows.forEach((row, index) => {
-                const pageNum = Math.ceil((index + 1) / entriesPerPage);
-                row.style.display = pageNum === currentPage ? '' : 'none';
-            });
-
-            // Update pagination info
-            const startEntry = currentPage === 1 ? 1 : (currentPage - 1) * entriesPerPage + 1;
-            const endEntry = Math.min(currentPage * entriesPerPage, totalRows);
-            document.getElementById('startEntry').textContent = totalRows === 0 ? 0 : startEntry;
-            document.getElementById('endEntry').textContent = endEntry;
-
-            // Update button states
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages;
-
-            // Update page numbers
-            updatePageNumbers(totalPages);
-        }
-
-        function updatePageNumbers(totalPages) {
-            const pageNumbersContainer = document.getElementById('pageNumbers');
-            pageNumbersContainer.innerHTML = '';
-
-            if (totalPages <= 1) return;
-
-            // Show first page
-            pageNumbersContainer.appendChild(createPageButton(1));
-
-            // Show pages around current page
-            const startPage = Math.max(2, currentPage - 1);
-            const endPage = Math.min(totalPages - 1, currentPage + 1);
-
-            // Add ellipsis if needed
-            if (startPage > 2) {
-                const ellipsis = document.createElement('span');
-                ellipsis.className = 'px-2 py-2 text-gray-600';
-                ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
-            }
-
-            // Add middle pages
-            for (let i = startPage; i <= endPage; i++) {
-                pageNumbersContainer.appendChild(createPageButton(i));
-            }
-
-            // Add ellipsis if needed
-            if (endPage < totalPages - 1) {
-                const ellipsis = document.createElement('span');
-                ellipsis.className = 'px-2 py-2 text-gray-600';
-                ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
-            }
-
-            // Show last page
-            if (totalPages > 1) {
-                pageNumbersContainer.appendChild(createPageButton(totalPages));
-            }
-        }
-
-        function createPageButton(pageNum) {
-            const button = document.createElement('button');
-            button.className = `px-3 py-2 rounded-lg transition ${
-                currentPage === pageNum 
-                    ? 'bg-green-500 text-white' 
-                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`;
-            button.textContent = pageNum;
-            button.onclick = function() {
-                currentPage = pageNum;
-                updatePagination();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-            return button;
-        }
-
-        function nextPage() {
-            const rows = document.querySelectorAll('#completedTableBody tr');
-            const totalRows = rows.length;
-            const totalPages = Math.ceil(totalRows / entriesPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                updatePagination();
-            }
-        }
-
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                updatePagination();
-            }
+        function changeEntriesPerPage(value) {
+            const searchParams = new URLSearchParams(window.location.search);
+            searchParams.set('entries_per_page', value);
+            searchParams.set('page', '1');
+            window.location.href = 'completed-fees.php?' + searchParams.toString();
         }
 
         // Print function - open in new window

@@ -51,17 +51,32 @@ $query = "SELECT
         ni.court_name,
         cr.court_name,
         cc.court_name,
-        '',
-        ''
+        ep.court_no,
+        ao.court_no
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
-        WHEN party_type IN ('complainant', 'decree_holder') THEN name 
-    END SEPARATOR ', ') 
+        WHEN party_type IN ('complainant', 'decree_holder','plaintiff') THEN name 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
     FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
-    END SEPARATOR ', ') 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
     FROM case_parties WHERE case_id = c.id) as defendant_parties,
+    CONCAT(
+        IF((SELECT COUNT(*) FROM case_parties WHERE case_id = c.id AND party_type IN ('complainant', 'decree_holder','plaintiff')) > 0,
+            CONCAT('PLAINTIFF: ', COALESCE((SELECT GROUP_CONCAT(DISTINCT CONCAT(name, ' (', address, ')') SEPARATOR ', ')
+            FROM case_parties 
+            WHERE case_id = c.id AND party_type IN ('complainant', 'decree_holder','plaintiff')), '')),
+            ''),
+        IF((SELECT COUNT(*) FROM case_parties WHERE case_id = c.id AND party_type IN ('complainant', 'decree_holder','plaintiff')) > 0 
+            AND (SELECT COUNT(*) FROM case_parties WHERE case_id = c.id AND party_type IN ('accused', 'defendant')) > 0, 
+            ' || DEFENDANT: ', ''),
+        IF((SELECT COUNT(*) FROM case_parties WHERE case_id = c.id AND party_type IN ('accused', 'defendant')) > 0,
+            COALESCE((SELECT GROUP_CONCAT(DISTINCT CONCAT(name, ' (', address, ')') SEPARATOR ', ')
+            FROM case_parties 
+            WHERE case_id = c.id AND party_type IN ('accused', 'defendant')), ''),
+            '')
+    ) as accused_opposite_party_address,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
     previous.update_date as previous_position_date,
@@ -196,7 +211,9 @@ if (!empty($search_query)) {
     $query .= " AND (c.loan_number LIKE '" . $search_term . "'
                OR c.unique_case_id LIKE '" . $search_term . "'
                OR cl.name LIKE '" . $search_term . "'
-               OR c.cnr_number LIKE '" . $search_term . "')";
+               OR c.cnr_number LIKE '" . $search_term . "'
+               OR COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '" . $search_term . "'
+               OR EXISTS (SELECT 1 FROM case_parties WHERE case_id = c.id AND name LIKE '" . $search_term . "'))";
 }
 
 // Apply filters
@@ -228,8 +245,14 @@ if ($priority_filter !== '') {
 // Add GROUP BY clause to properly aggregate data
 $query .= " GROUP BY c.id";
 
-// Order by latest position update date if exists, otherwise by filing date (most recent first)
-$query .= " ORDER BY COALESCE(latest.update_date, COALESCE(
+// Order by latest position update date if exists, otherwise by filing date (today first, then backwards)
+$query .= " ORDER BY CASE WHEN COALESCE(latest.update_date, COALESCE(
+    ni.filing_date,
+    cr.filing_date,
+    cc.case_filling_date,
+    ep.date_of_filing,
+    ao.filing_date
+)) > CURDATE() THEN 1 ELSE 0 END ASC, COALESCE(latest.update_date, COALESCE(
     ni.filing_date,
     cr.filing_date,
     cc.case_filling_date,
@@ -265,6 +288,7 @@ $commonHeaders = [
     'Customer Name',
     'Mobile',
     'Accused/Opposite Party',
+    'Accused/Opposite Party Address',
     'CNR Number',
     'Loan Number',
     'Filing Date',
@@ -455,6 +479,7 @@ if (count($typesToExport) === 1) {
             $case['customer_name'] ?? 'N/A',
             $case['mobile'] ?? 'N/A',
             $accused_opposite,
+            $case['accused_opposite_party_address'] ?? 'N/A',
             $case['cnr_number'] ?? 'N/A',
             $case['loan_number'] ?? 'N/A',
             $filing_date_formatted,
@@ -627,6 +652,7 @@ if (count($typesToExport) === 1) {
                 $case['customer_name'] ?? 'N/A',
                 $case['mobile'] ?? 'N/A',
                 $accused_opposite,
+                $case['accused_opposite_party_address'] ?? 'N/A',
                 $case['cnr_number'] ?? 'N/A',
                 $case['loan_number'] ?? 'N/A',
                 $filing_date_formatted,
