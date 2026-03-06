@@ -24,6 +24,7 @@ SELECT
     c.unique_case_id,
     c.case_type,
     c.cnr_number,
+    c.loan_number,
     COALESCE(
         ni.case_no,
         cr.case_no,
@@ -60,6 +61,7 @@ if (!empty($search_query)) {
     $processing_sql .= " AND (
         c.cnr_number LIKE '" . $search_term . "'
         OR c.unique_case_id LIKE '" . $search_term . "'
+        OR c.loan_number LIKE '" . $search_term . "'
         OR cl.name LIKE '" . $search_term . "'
         OR COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '" . $search_term . "'
         OR cp.name LIKE '" . $search_term . "'
@@ -219,6 +221,7 @@ table tbody tr:hover {
     <thead>
         <tr>
             <th>Case ID</th>
+            <th>Loan</th>
             <th>Case No.</th>
             <th>CNR No.</th>
             <th>Client Name</th>
@@ -238,6 +241,7 @@ table tbody tr:hover {
         ?>
         <tr>
             <td><?php echo htmlspecialchars($account['unique_case_id']); ?></td>
+            <td><?php echo htmlspecialchars($account['loan_number'] ?? 'N/A'); ?></td>
             <td><?php echo htmlspecialchars($account['case_no'] ?? 'N/A'); ?></td>
             <td><?php echo htmlspecialchars($account['cnr_number'] ?? 'N/A'); ?></td>
             <td><?php echo htmlspecialchars($account['client_name']); ?></td>
