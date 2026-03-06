@@ -61,6 +61,7 @@ $query = "SELECT
     FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
+    latest.remarks as latest_remark,
     previous.update_date as previous_position_date,
     previous.position as previous_position,
     (SELECT COALESCE(SUM(fee_amount), 0) FROM case_fee_grid WHERE case_id = c.id) as total_fees,
@@ -74,7 +75,7 @@ LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
 LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
 LEFT JOIN (
-    SELECT case_id, update_date, position
+    SELECT case_id, update_date, position, remarks
     FROM case_position_updates
     WHERE (case_id, update_date) IN (
         SELECT case_id, MAX(update_date)
@@ -131,7 +132,19 @@ if ($priority_filter !== '') {
 }
 
 $query .= " GROUP BY c.id
-ORDER BY CASE WHEN COALESCE(latest.update_date, COALESCE(ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date)) > CURDATE() THEN 1 ELSE 0 END ASC, COALESCE(latest.update_date, COALESCE(ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date)) DESC";
+ORDER BY CASE WHEN COALESCE(latest.update_date, COALESCE(
+    ni.filing_date,
+    cr.filing_date,
+    cc.case_filling_date,
+    ep.date_of_filing,
+    ao.filing_date
+)) > CURDATE() THEN 1 ELSE 0 END ASC, COALESCE(latest.update_date, COALESCE(
+    ni.filing_date,
+    cr.filing_date,
+    cc.case_filling_date,
+    ep.date_of_filing,
+    ao.filing_date
+)) DESC, c.created_at DESC";
 
 $result = mysqli_query($conn, $query);
 $cases = [];
@@ -328,7 +341,12 @@ if ($plaintiffs && $defendants) {
 <td><?= htmlspecialchars($c['cnr_number'] ?? 'N/A') ?></td>
 <td><?= date('d M Y', strtotime($c['latest_position_date'] ?? $c['filing_date'])) ?></td>
 <td><?= ucwords(str_replace('-', ' ', $c['case_type'])) ?></td>
-<td><?= $c['latest_position'] ?? 'No Update' ?></td>
+<td>
+    <?= htmlspecialchars($c['latest_position'] ?? 'No Update') ?>
+    <?php if (!empty($c['latest_remark'])): ?>
+        <br><small><?= nl2br(htmlspecialchars($c['latest_remark'])) ?></small>
+    <?php endif; ?>
+</td>
 <td class="next-date-cell"></td>
 </tr>
 <?php endforeach; ?>

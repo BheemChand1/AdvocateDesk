@@ -106,6 +106,7 @@ SELECT
     c.unique_case_id,
     c.case_type,
     c.cnr_number,
+    c.loan_number,
     COALESCE(
         ni.case_no,
         cr.case_no,
@@ -146,6 +147,7 @@ if (!empty($search_query)) {
     $pending_cases_sql .= " AND (
         c.cnr_number LIKE '" . $search_term . "'
         OR c.unique_case_id LIKE '" . $search_term . "'
+        OR c.loan_number LIKE '" . $search_term . "'
         OR cl.name LIKE '" . $search_term . "'
         OR COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '" . $search_term . "'
         OR cp.name LIKE '" . $search_term . "'
@@ -264,7 +266,7 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                     <input 
                                         type="text" 
                                         name="search" 
-                                        placeholder="Search by Case ID, Case No., CNR No., Client Name, or Opposite Party..." 
+                                        placeholder="Search by Case ID, Loan, Case No., CNR No., Client Name, or Opposite Party..." 
                                         value="<?php echo htmlspecialchars($search_query); ?>"
                                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                                     >
@@ -305,6 +307,7 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                 <thead>
                                     <tr class="bg-gray-100 border-b-2 border-gray-300">
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case ID</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Loan</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case No.</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">CNR No.</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Client Name</th>
@@ -320,6 +323,7 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                     <?php foreach ($pending_cases as $case): ?>
                                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                                         <td class="px-4 py-3 text-sm text-gray-700 font-medium"><?php echo htmlspecialchars($case['unique_case_id']); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['loan_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700"><?php echo htmlspecialchars($case['client_name']); ?></td>

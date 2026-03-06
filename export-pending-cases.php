@@ -23,6 +23,7 @@ SELECT
     c.unique_case_id,
     c.case_type,
     c.cnr_number,
+    c.loan_number,
     COALESCE(
         ni.case_no,
         cr.case_no,
@@ -59,6 +60,7 @@ if (!empty($search_query)) {
     $pending_cases_sql .= " AND (
         c.cnr_number LIKE '" . $search_term . "'
         OR c.unique_case_id LIKE '" . $search_term . "'
+        OR c.loan_number LIKE '" . $search_term . "'
         OR cl.name LIKE '" . $search_term . "'
         OR COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '" . $search_term . "'
         OR cp.name LIKE '" . $search_term . "'
@@ -100,6 +102,7 @@ fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 // Define headers
 $headers = [
     'Case ID',
+    'Loan',
     'Case No.',
     'CNR No.',
     'Client Name',
@@ -119,6 +122,7 @@ fputcsv($output, $headers);
 foreach ($pending_cases as $case) {
     $row = [
         $case['unique_case_id'] ?? 'N/A',
+        $case['loan_number'] ?? 'N/A',
         $case['case_no'] ?? 'N/A',
         $case['cnr_number'] ?? 'N/A',
         $case['client_name'] ?? 'N/A',

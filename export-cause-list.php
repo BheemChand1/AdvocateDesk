@@ -79,6 +79,7 @@ $query = "SELECT
     ) as accused_opposite_party_address,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
+    latest.remarks as latest_remark,
     previous.update_date as previous_position_date,
     previous.position as previous_position,
     (SELECT COALESCE(SUM(fee_amount), 0) FROM case_fee_grid WHERE case_id = c.id) as total_fees,
@@ -181,7 +182,7 @@ LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
 LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
 LEFT JOIN (
-    SELECT case_id, update_date, position
+    SELECT case_id, update_date, position, remarks
     FROM case_position_updates
     WHERE (case_id, update_date) IN (
         SELECT case_id, MAX(update_date)
@@ -245,14 +246,8 @@ if ($priority_filter !== '') {
 // Add GROUP BY clause to properly aggregate data
 $query .= " GROUP BY c.id";
 
-// Order by latest position update date if exists, otherwise by filing date (today first, then backwards)
-$query .= " ORDER BY CASE WHEN COALESCE(latest.update_date, COALESCE(
-    ni.filing_date,
-    cr.filing_date,
-    cc.case_filling_date,
-    ep.date_of_filing,
-    ao.filing_date
-)) > CURDATE() THEN 1 ELSE 0 END ASC, COALESCE(latest.update_date, COALESCE(
+// Order by latest position update date if exists, otherwise by filing date (most recent first)
+$query .= " ORDER BY COALESCE(latest.update_date, COALESCE(
     ni.filing_date,
     cr.filing_date,
     cc.case_filling_date,
@@ -294,6 +289,7 @@ $commonHeaders = [
     'Filing Date',
     'Fixed Date',
     'Latest Stage',
+    'Latest Stage Remark',
     'Total Fee',
     'Balance Fee',
     'Priority Status',
@@ -485,6 +481,7 @@ if (count($typesToExport) === 1) {
             $filing_date_formatted,
             $display_date_formatted,
             $case['latest_position'] ?? 'No Updates',
+            $case['latest_remark'] ?? '',
             '₹' . number_format($case['total_fees'], 2),
             '₹' . number_format($case['balance_fees'], 2),
             $case['priority_status'] == 1 ? 'Priority' : 'Not Priority',
@@ -658,6 +655,7 @@ if (count($typesToExport) === 1) {
                 $filing_date_formatted,
                 $display_date_formatted,
                 $case['latest_position'] ?? 'No Updates',
+                $case['latest_remark'] ?? '',
                 '₹' . number_format($case['total_fees'], 2),
                 '₹' . number_format($case['balance_fees'], 2),
                 $case['priority_status'] == 1 ? 'Priority' : 'Not Priority',

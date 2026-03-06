@@ -66,6 +66,7 @@ $query = "SELECT
     FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
+    latest.remarks as latest_remark,
     previous.update_date as previous_position_date,
     previous.position as previous_position,
     (SELECT COALESCE(SUM(fee_amount), 0) FROM case_fee_grid WHERE case_id = c.id) as total_fees,
@@ -80,7 +81,7 @@ LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
 LEFT JOIN case_parties cp ON c.id = cp.case_id
 LEFT JOIN (
-    SELECT case_id, update_date, position
+    SELECT case_id, update_date, position, remarks
     FROM case_position_updates
     WHERE (case_id, update_date) IN (
         SELECT case_id, MAX(update_date)
@@ -559,6 +560,11 @@ if ($stages_result) {
                                                 <span class="inline-flex px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                                                     <i class="fas fa-tasks mr-1"></i><?php echo htmlspecialchars($case['latest_position']); ?>
                                                 </span>
+                                                <?php if (!empty($case['latest_remark'])): ?>
+                                                    <div class="mt-2 text-xs text-gray-600 leading-relaxed">
+                                                        <i class="fas fa-comment-dots mr-1 text-gray-500"></i><?php echo nl2br(htmlspecialchars($case['latest_remark'])); ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             <?php else: ?>
                                                 <span class="text-sm text-gray-400">No Updates</span>
                                             <?php endif; ?>
