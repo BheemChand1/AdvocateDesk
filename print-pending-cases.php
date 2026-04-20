@@ -227,6 +227,7 @@ table tbody tr:hover {
             <th>Client Name</th>
             <th>Accused/Opposite Party</th>
             <th>Case Type</th>
+            <th>Fee Name</th>
             <th>Bill Number</th>
             <th>Bill Date</th>
             <th>Fee Amount</th>
@@ -259,6 +260,7 @@ table tbody tr:hover {
                 }
             ?></td>
             <td><?php echo htmlspecialchars($case['case_type']); ?></td>
+            <td><?php echo htmlspecialchars($case['fee_name'] ?? 'N/A'); ?></td>
             <td><?php echo htmlspecialchars($case['bill_number'] ?? 'N/A'); ?></td>
             <td><?php echo htmlspecialchars($case['bill_date'] ?? 'N/A'); ?></td>
             <td class="amount">₹<?php echo number_format($case['fee_amount'], 2); ?></td>
