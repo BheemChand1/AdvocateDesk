@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
     password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'manager', 'user') DEFAULT 'user',
     status ENUM('active', 'inactive') DEFAULT 'active',
+    session_token VARCHAR(255) NULL,
     last_login DATETIME NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

@@ -123,6 +123,7 @@ if (isset($_COOKIE['remember_user']) && !isset($_SESSION['user_logged_in'])) {
                         <input type="checkbox" name="remember" class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
                         <span class="ml-2 text-sm text-gray-700">Remember me</span>
                     </label>
+                   
                 </div>
 
                 <!-- Login Button -->

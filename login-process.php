@@ -28,17 +28,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Verify password
         if (password_verify($password, $user['password'])) {
             
+            // Generate session token
+            $session_token = bin2hex(random_bytes(32));
+            
             // Set session variables
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_username'] = $user['username'];
             $_SESSION['user_name'] = $user['full_name'];
             $_SESSION['user_role'] = $user['role'];
             $_SESSION['user_logged_in'] = true;
+            $_SESSION['session_token'] = $session_token;
             
-            // Update last login
-            $update_sql = "UPDATE admin_users SET last_login = NOW() WHERE id = ?";
+            // Update last login and session token
+            $update_sql = "UPDATE admin_users SET last_login = NOW(), session_token = ? WHERE id = ?";
             $update_stmt = mysqli_prepare($conn, $update_sql);
-            mysqli_stmt_bind_param($update_stmt, "i", $user['id']);
+            mysqli_stmt_bind_param($update_stmt, "si", $session_token, $user['id']);
             mysqli_stmt_execute($update_stmt);
             
             // Handle Remember Me

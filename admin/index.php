@@ -34,11 +34,14 @@ require_once '../includes/connection.php';
                         <p class="text-sm text-gray-600">Case Management System</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-4">
                     <div class="text-right hidden sm:block">
                         <p class="text-sm font-semibold text-gray-800"><?php echo htmlspecialchars($_SESSION['admin_name']); ?></p>
                         <p class="text-xs text-gray-600"><?php echo ucfirst(htmlspecialchars($_SESSION['admin_role'])); ?></p>
                     </div>
+                    <a href="reset-password.php" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-key mr-2"></i>Reset Password
+                    </a>
                     <a href="logout.php" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition">
                         <i class="fas fa-sign-out-alt mr-2"></i>Logout
                     </a>

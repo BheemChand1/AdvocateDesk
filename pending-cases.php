@@ -313,6 +313,7 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Client Name</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Accused/Opposite Party</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case Type</th>
+                                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fee Name</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fee Amount</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Number</th>
                                         <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bill Date</th>
@@ -344,6 +345,7 @@ while ($row = mysqli_fetch_assoc($pending_cases_result)) {
                                             ?>
                                         </td>
                                         <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['case_type']); ?></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"><?php echo htmlspecialchars($case['fee_name'] ?? 'N/A'); ?></td>
                                         <td class="px-4 py-3 text-sm text-gray-700 font-semibold text-blue-600">₹<?php echo number_format($case['fee_amount'], 2); ?></td>
                                         <td class="px-4 py-3">
                                             <form method="POST" class="flex gap-2 items-center">

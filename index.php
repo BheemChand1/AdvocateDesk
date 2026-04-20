@@ -8,6 +8,10 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true)
 }
 
 require_once 'includes/connection.php';
+require_once 'includes/session-validator.php';
+
+// Validate session token
+validate_session_token($conn);
 
 // Case type display mapping
 $case_type_labels = [
