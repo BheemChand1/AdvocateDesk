@@ -1,9 +1,9 @@
 <?php
 // Database configuration
 $host = 'localhost';        // Database host (usually 'localhost' for XAMPP)
-$username = 'root';         // Database username (default 'root' for XAMPP)
-$password = '';             // Database password (default empty for XAMPP)
-$database = 'case_management';   // Database name
+$username = 'mpslegal';         // Database username (default 'root' for XAMPP)
+$password = '~xwOCXT%WGr;';             // Database password (default empty for XAMPP)
+$database = 'mpslegaldb';   // Database name
 
 // Create connection
 $conn = mysqli_connect($host, $username, $password, $database);

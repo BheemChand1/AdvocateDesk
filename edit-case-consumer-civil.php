@@ -91,22 +91,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $branch_name = mysqli_real_escape_string($conn, $_POST['branch_name'] ?? '');
     $region = mysqli_real_escape_string($conn, $_POST['region'] ?? '');
     $complainant_authorised_person = mysqli_real_escape_string($conn, $_POST['complainant_authorised_person'] ?? '');
-    $status = mysqli_real_escape_string($conn, $_POST['status'] ?? 'pending');
-    $case_stage_id = (!empty($_POST['case_stage_id'])) ? intval($_POST['case_stage_id']) : NULL;
 
     $update_sql = "UPDATE cases SET cnr_number = '$cnr_number', loan_number = '$loan_number', 
                   product = '$product', branch_name = '$branch_name', region = '$region', 
-                  complainant_authorised_person = '$complainant_authorised_person', 
-                  status = '$status'" . ($case_stage_id !== NULL ? ", case_stage_id = $case_stage_id" : "") . 
-                  " WHERE id = $case_id";
+                  complainant_authorised_person = '$complainant_authorised_person' 
+                  WHERE id = $case_id";
 
     if (mysqli_query($conn, $update_sql)) {
         // Update CONSUMER_CIVIL specific details
         $case_type_specific = mysqli_real_escape_string($conn, $_POST['case_type_specific'] ?? '');
-        $complainant_name = mysqli_real_escape_string($conn, $_POST['complainant_name'] ?? '');
-        $complainant_address = mysqli_real_escape_string($conn, $_POST['complainant_address'] ?? '');
-        $defendant_name = mysqli_real_escape_string($conn, $_POST['defendant_name'] ?? '');
-        $defendant_address = mysqli_real_escape_string($conn, $_POST['defendant_address'] ?? '');
         $filing_location = mysqli_real_escape_string($conn, $_POST['filing_location'] ?? '');
         $court_name = mysqli_real_escape_string($conn, $_POST['court_name'] ?? '');
         $case_no = mysqli_real_escape_string($conn, $_POST['case_no'] ?? '');
@@ -121,8 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($case_details) {
             // Update existing details
             $details_sql = "UPDATE case_consumer_civil_details SET case_type_specific = '$case_type_specific',
-                           complainant_name = '$complainant_name', complainant_address = '$complainant_address',
-                           defendant_name = '$defendant_name', defendant_address = '$defendant_address',
                            filing_location = '$filing_location', court_name = '$court_name', case_no = '$case_no',
                            court_no = '$court_no', advocate = '$advocate', poa = '$poa',
                            case_filling_date = '$case_filling_date', legal_notice_date = '$legal_notice_date',
@@ -130,113 +121,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            WHERE case_id = $case_id";
         } else {
             // Insert new details
-            $details_sql = "INSERT INTO case_consumer_civil_details (case_id, case_type_specific, complainant_name,
-                           complainant_address, defendant_name, defendant_address, filing_location, court_name,
-                           case_no, court_no, advocate, poa, case_filling_date, legal_notice_date,
-                           case_vs_law_act, swt_value)
-                           VALUES ($case_id, '$case_type_specific', '$complainant_name', '$complainant_address',
-                           '$defendant_name', '$defendant_address', '$filing_location', '$court_name',
+            $details_sql = "INSERT INTO case_consumer_civil_details (case_id, case_type_specific,
+                           filing_location, court_name, case_no, court_no, advocate, poa, 
+                           case_filling_date, legal_notice_date, case_vs_law_act, swt_value)
+                           VALUES ($case_id, '$case_type_specific', '$filing_location', '$court_name',
                            '$case_no', '$court_no', '$advocate', '$poa', '$case_filling_date',
                            '$legal_notice_date', '$case_vs_law_act', '$swt_value')";
         }
 
         if (mysqli_query($conn, $details_sql)) {
-            // Update parties
-            // Only update if we have valid party data
-            $has_parties = false;
+            // Update parties - Always delete existing and recreate based on form data
+            // This allows users to remove all parties if needed
+            mysqli_query($conn, "DELETE FROM case_parties WHERE case_id = $case_id");
             
-            // Check if we have any party data to process
-            $complainant_name = mysqli_real_escape_string($conn, $_POST['complainant_name'] ?? '');
-            $defendant_name = mysqli_real_escape_string($conn, $_POST['defendant_name'] ?? '');
+            // Process Complainant
+            $complainant_name = $_POST['complainant_name'] ?? '';
+            if (!empty($complainant_name)) {
+                $complainant_name_safe = mysqli_real_escape_string($conn, $complainant_name);
+                $complainant_address_safe = mysqli_real_escape_string($conn, $_POST['complainant_address'] ?? '');
+                $stmt_party = mysqli_prepare($conn, "
+                    INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+                $is_primary = 1;
+                $party_type = 'complainant';
+                mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $complainant_name_safe, $complainant_address_safe, $is_primary);
+                mysqli_stmt_execute($stmt_party);
+                mysqli_stmt_close($stmt_party);
+            }
+            
+            // Process Additional Complainants
+            $additional_complainant_names = $_POST['additional_complainant_name'] ?? [];
+            $additional_complainant_addresses = $_POST['additional_complainant_address'] ?? [];
+            if (is_array($additional_complainant_names)) {
+                foreach ($additional_complainant_names as $index => $add_name) {
+                    if (!empty($add_name)) {
+                        $add_name_safe = mysqli_real_escape_string($conn, $add_name);
+                        $add_address_safe = mysqli_real_escape_string($conn, $additional_complainant_addresses[$index] ?? '');
+                        $stmt_party = mysqli_prepare($conn, "
+                            INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
+                            VALUES (?, ?, ?, ?, ?)
+                        ");
+                        $is_primary = 0;
+                        $party_type = 'complainant';
+                        mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name_safe, $add_address_safe, $is_primary);
+                        mysqli_stmt_execute($stmt_party);
+                        mysqli_stmt_close($stmt_party);
+                    }
+                }
+            }
+            
+            // Process Defendant
+            $defendant_name = $_POST['defendant_name'] ?? '';
+            if (!empty($defendant_name)) {
+                $defendant_name_safe = mysqli_real_escape_string($conn, $defendant_name);
+                $defendant_address_safe = mysqli_real_escape_string($conn, $_POST['defendant_address'] ?? '');
+                $stmt_party = mysqli_prepare($conn, "
+                    INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+                $is_primary = 1;
+                $party_type = 'defendant';
+                mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $defendant_name_safe, $defendant_address_safe, $is_primary);
+                mysqli_stmt_execute($stmt_party);
+                mysqli_stmt_close($stmt_party);
+            }
+            
+            // Process Additional Defendants
             $additional_defendant_names = $_POST['additional_defendant_name'] ?? [];
-            
-            // Count non-empty additional defendants
-            $additional_defendant_count = 0;
+            $additional_defendant_addresses = $_POST['additional_defendant_address'] ?? [];
             if (is_array($additional_defendant_names)) {
-                foreach ($additional_defendant_names as $name) {
-                    if (!empty($name)) {
-                        $additional_defendant_count++;
-                    }
-                }
-            }
-            
-            // Only delete and recreate if we have parties to save
-            if (!empty($complainant_name) || !empty($defendant_name) || $additional_defendant_count > 0) {
-                $has_parties = true;
-            }
-            
-            if ($has_parties) {
-                // Delete existing parties only if we're replacing them
-                mysqli_query($conn, "DELETE FROM case_parties WHERE case_id = $case_id");
-                
-                // Process Complainant
-                $complainant_address = mysqli_real_escape_string($conn, $_POST['complainant_address'] ?? '');
-                if (!empty($complainant_name)) {
-                    $stmt_party = mysqli_prepare($conn, "
-                        INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
-                        VALUES (?, ?, ?, ?, ?)
-                    ");
-                    $is_primary = 1;
-                    $party_type = 'complainant';
-                    mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $complainant_name, $complainant_address, $is_primary);
-                    mysqli_stmt_execute($stmt_party);
-                    mysqli_stmt_close($stmt_party);
-                }
-                
-                // Process Additional Complainants
-                $additional_complainant_names = $_POST['additional_complainant_name'] ?? [];
-                $additional_complainant_addresses = $_POST['additional_complainant_address'] ?? [];
-                if (is_array($additional_complainant_names)) {
-                    foreach ($additional_complainant_names as $index => $add_name) {
-                        if (!empty($add_name)) {
-                            $stmt_party = mysqli_prepare($conn, "
-                                INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
-                                VALUES (?, ?, ?, ?, ?)
-                            ");
-                            $add_address = $additional_complainant_addresses[$index] ?? '';
-                            $add_name = mysqli_real_escape_string($conn, $add_name);
-                            $add_address = mysqli_real_escape_string($conn, $add_address);
-                            $is_primary = 0;
-                            $party_type = 'complainant';
-                            mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name, $add_address, $is_primary);
-                            mysqli_stmt_execute($stmt_party);
-                            mysqli_stmt_close($stmt_party);
-                        }
-                    }
-                }
-                
-                // Process Defendant
-                $defendant_address = mysqli_real_escape_string($conn, $_POST['defendant_address'] ?? '');
-                if (!empty($defendant_name)) {
-                    $stmt_party = mysqli_prepare($conn, "
-                        INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
-                        VALUES (?, ?, ?, ?, ?)
-                    ");
-                    $is_primary = 1;
-                    $party_type = 'defendant';
-                    mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $defendant_name, $defendant_address, $is_primary);
-                    mysqli_stmt_execute($stmt_party);
-                    mysqli_stmt_close($stmt_party);
-                }
-                
-                // Process Additional Defendants
-                $additional_defendant_addresses = $_POST['additional_defendant_address'] ?? [];
-                if (is_array($additional_defendant_names)) {
-                    foreach ($additional_defendant_names as $index => $add_name) {
-                        if (!empty($add_name)) {
-                            $stmt_party = mysqli_prepare($conn, "
-                                INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
-                                VALUES (?, ?, ?, ?, ?)
-                            ");
-                            $add_address = $additional_defendant_addresses[$index] ?? '';
-                            $add_name = mysqli_real_escape_string($conn, $add_name);
-                            $add_address = mysqli_real_escape_string($conn, $add_address);
-                            $is_primary = 0;
-                            $party_type = 'defendant';
-                            mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name, $add_address, $is_primary);
-                            mysqli_stmt_execute($stmt_party);
-                            mysqli_stmt_close($stmt_party);
-                        }
+                foreach ($additional_defendant_names as $index => $add_name) {
+                    if (!empty($add_name)) {
+                        $add_name_safe = mysqli_real_escape_string($conn, $add_name);
+                        $add_address_safe = mysqli_real_escape_string($conn, $additional_defendant_addresses[$index] ?? '');
+                        $stmt_party = mysqli_prepare($conn, "
+                            INSERT INTO case_parties (case_id, party_type, name, address, is_primary)
+                            VALUES (?, ?, ?, ?, ?)
+                        ");
+                        $is_primary = 0;
+                        $party_type = 'defendant';
+                        mysqli_stmt_bind_param($stmt_party, "isssi", $case_id, $party_type, $add_name_safe, $add_address_safe, $is_primary);
+                        mysqli_stmt_execute($stmt_party);
+                        mysqli_stmt_close($stmt_party);
                     }
                 }
             }
@@ -441,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <input type="text" name="case_vs_law_act" value="<?php echo htmlspecialchars($case_details['case_vs_law_act'] ?? ''); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter case v/s with relevant law/act">
                                 </div>
                                 <div>
-                                    <label class="block text-gray-700 text-sm font-semibold mb-1">SWT Value</label>
+                                    <label class="block text-gray-700 text-sm font-semibold mb-1">Suit Value</label>
                                     <input type="text" name="swt_value" value="<?php echo htmlspecialchars($case_details['swt_value'] ?? ''); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter SWT value">
                                 </div>
                             </div>
@@ -558,33 +525,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
 
-                    <!-- Case Status -->
-                    <div class="mb-6">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                            <i class="fas fa-tasks text-blue-500 mr-2"></i>Case Status
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Case Status</label>
-                                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="pending" <?php echo ($case['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="active" <?php echo ($case['status'] ?? '') === 'active' ? 'selected' : ''; ?>>Active</option>
-                                    <option value="closed" <?php echo ($case['status'] ?? '') === 'closed' ? 'selected' : ''; ?>>Closed</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-gray-700 text-sm font-semibold mb-1">Case Stage</label>
-                                <select name="case_stage_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Select a stage</option>
-                                    <?php foreach ($stages as $stage): ?>
-                                    <option value="<?php echo $stage['id']; ?>" <?php echo $case['case_stage_id'] == $stage['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($stage['stage_name']); ?>
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+
 
                     <!-- Fee Grid -->
                     <div class="mb-6">
@@ -733,7 +674,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.querySelectorAll('.remove-complainant').forEach(button => {
                 button.addEventListener('click', function(e) {
                     e.preventDefault();
-                    this.closest('div').remove();
+                    this.closest('.grid').remove();
                 });
             });
 
@@ -741,7 +682,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.querySelectorAll('.remove-defendant').forEach(button => {
                 button.addEventListener('click', function(e) {
                     e.preventDefault();
-                    this.closest('div').remove();
+                    this.closest('.grid').remove();
                 });
             });
 

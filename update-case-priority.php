@@ -13,6 +13,7 @@ require_once 'includes/connection.php';
 // Get POST data
 $case_id = isset($_POST['case_id']) ? intval($_POST['case_id']) : 0;
 $priority_status = isset($_POST['priority_status']) ? intval($_POST['priority_status']) : 0;
+$priority_status_second = isset($_POST['priority_status_second']) ? intval($_POST['priority_status_second']) : 0;
 $remark = isset($_POST['remark']) ? mysqli_real_escape_string($conn, $_POST['remark']) : '';
 
 if ($case_id == 0) {
@@ -23,6 +24,7 @@ if ($case_id == 0) {
 // Update case priority and remark
 $query = "UPDATE cases 
           SET priority_status = $priority_status,
+              priority_status_second = $priority_status_second,
               remark = '$remark',
               updated_at = NOW()
           WHERE id = $case_id";

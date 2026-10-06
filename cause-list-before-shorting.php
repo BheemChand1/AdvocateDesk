@@ -16,7 +16,6 @@ $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $from_date = isset($_GET['from_date']) ? $_GET['from_date'] : '';
 $to_date = isset($_GET['to_date']) ? $_GET['to_date'] : '';
 $priority_filter = isset($_GET['priority']) ? $_GET['priority'] : '';
-$cnr_filter = isset($_GET['cnr_status']) ? $_GET['cnr_status'] : '';
 
 // Pagination settings
 $entries_per_page = isset($_GET['entries_per_page']) ? intval($_GET['entries_per_page']) : 25;
@@ -33,7 +32,6 @@ $query = "SELECT
     c.status,
     c.location,
     c.priority_status,
-    c.priority_status_second,
     c.remark,
     cl.name as customer_name,
     cl.mobile,
@@ -68,7 +66,6 @@ $query = "SELECT
     FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
-    latest.remarks as latest_remark,
     previous.update_date as previous_position_date,
     previous.position as previous_position,
     (SELECT COALESCE(SUM(fee_amount), 0) FROM case_fee_grid WHERE case_id = c.id) as total_fees,
@@ -83,7 +80,7 @@ LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
 LEFT JOIN case_parties cp ON c.id = cp.case_id
 LEFT JOIN (
-    SELECT case_id, update_date, position, remarks
+    SELECT case_id, update_date, position
     FROM case_position_updates
     WHERE (case_id, update_date) IN (
         SELECT case_id, MAX(update_date)
@@ -140,49 +137,21 @@ if (!empty($to_date)) {
 
 // Apply priority filter
 if ($priority_filter !== '') {
-    if ($priority_filter === '1' || $priority_filter === 'first') {
-        $query .= " AND c.priority_status = 1";
-    } elseif ($priority_filter === '2' || $priority_filter === 'second') {
-        $query .= " AND c.priority_status_second = 1";
-    } elseif ($priority_filter === 'both') {
-        $query .= " AND c.priority_status = 1 AND c.priority_status_second = 1";
-    } elseif ($priority_filter === 'any') {
-        $query .= " AND (c.priority_status = 1 OR c.priority_status_second = 1)";
-    } elseif ($priority_filter === '0' || $priority_filter === 'none') {
-        $query .= " AND c.priority_status = 0 AND c.priority_status_second = 0";
-    }
-}
-
-// Apply CNR status filter
-if ($cnr_filter !== '') {
-    if ($cnr_filter === 'null') {
-        $query .= " AND (c.cnr_number IS NULL OR c.cnr_number = '')";
-    } elseif ($cnr_filter === 'not_null') {
-        $query .= " AND c.cnr_number IS NOT NULL AND c.cnr_number != ''";
-    }
+    $priority_filter_int = intval($priority_filter);
+    $query .= " AND c.priority_status = $priority_filter_int";
 }
 
 // Add GROUP BY clause to properly aggregate data
 $query .= " GROUP BY c.id";
 
-// Order by: Today's fixed date first, then never updated, then oldest updates
-$query .= " ORDER BY 
-    CASE WHEN DATE(COALESCE(latest.update_date, COALESCE(
-        ni.filing_date,
-        cr.filing_date,
-        cc.case_filling_date,
-        ep.date_of_filing,
-        ao.filing_date
-    ))) = CURDATE() THEN 0 ELSE 1 END ASC,
-    CASE WHEN latest.update_date IS NULL THEN 0 ELSE 1 END ASC,
-    COALESCE(latest.update_date, COALESCE(
-        ni.filing_date,
-        cr.filing_date,
-        cc.case_filling_date,
-        ep.date_of_filing,
-        ao.filing_date
-    )) ASC,
-    c.created_at DESC";
+// Order by latest position update date if exists, otherwise by filing date (most recent first)
+$query .= " ORDER BY COALESCE(latest.update_date, COALESCE(
+    ni.filing_date,
+    cr.filing_date,
+    cc.case_filling_date,
+    ep.date_of_filing,
+    ao.filing_date
+)) DESC, c.created_at DESC";
 
 // Get total count for pagination (before adding LIMIT)
 $count_query = "SELECT COUNT(DISTINCT c.id) as total FROM cases c
@@ -247,26 +216,8 @@ if (!empty($to_date)) {
 }
 
 if ($priority_filter !== '') {
-    if ($priority_filter === '1' || $priority_filter === 'first') {
-        $count_query .= " AND c.priority_status = 1";
-    } elseif ($priority_filter === '2' || $priority_filter === 'second') {
-        $count_query .= " AND c.priority_status_second = 1";
-    } elseif ($priority_filter === 'both') {
-        $count_query .= " AND c.priority_status = 1 AND c.priority_status_second = 1";
-    } elseif ($priority_filter === 'any') {
-        $count_query .= " AND (c.priority_status = 1 OR c.priority_status_second = 1)";
-    } elseif ($priority_filter === '0' || $priority_filter === 'none') {
-        $count_query .= " AND c.priority_status = 0 AND c.priority_status_second = 0";
-    }
-}
-
-// Apply CNR status filter to count query
-if ($cnr_filter !== '') {
-    if ($cnr_filter === 'null') {
-        $count_query .= " AND (c.cnr_number IS NULL OR c.cnr_number = '')";
-    } elseif ($cnr_filter === 'not_null') {
-        $count_query .= " AND c.cnr_number IS NOT NULL AND c.cnr_number != ''";
-    }
+    $priority_filter_int = intval($priority_filter);
+    $count_query .= " AND c.priority_status = $priority_filter_int";
 }
 
 // Execute count query
@@ -417,22 +368,8 @@ if ($stages_result) {
                             <select name="priority" 
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">All Cases</option>
-                                <option value="first" <?php echo ($priority_filter === 'first' || $priority_filter === '1') ? 'selected' : ''; ?>>1st Priority Cases</option>
-                                <option value="second" <?php echo ($priority_filter === 'second' || $priority_filter === '2') ? 'selected' : ''; ?>>2nd Priority Cases</option>
-                                <option value="both" <?php echo $priority_filter === 'both' ? 'selected' : ''; ?>>Both 1st & 2nd Priority</option>
-                                <option value="any" <?php echo $priority_filter === 'any' ? 'selected' : ''; ?>>Any Priority Cases</option>
-                                <option value="none" <?php echo ($priority_filter === 'none' || $priority_filter === '0') ? 'selected' : ''; ?>>Non-Priority Cases</option>
-                            </select>
-                        </div>
-                        
-                        <!-- CNR Status Filter -->
-                        <div>
-                            <label class="block text-gray-700 text-sm font-semibold mb-2">CNR Status</label>
-                            <select name="cnr_status" 
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">All Cases</option>
-                                <option value="null" <?php echo $cnr_filter == 'null' ? 'selected' : ''; ?>>CNR Missing (Null/Empty)</option>
-                                <option value="not_null" <?php echo $cnr_filter == 'not_null' ? 'selected' : ''; ?>>CNR Filled</option>
+                                <option value="1" <?php echo $priority_filter == '1' ? 'selected' : ''; ?>>Priority Cases</option>
+                                <option value="0" <?php echo $priority_filter == '0' ? 'selected' : ''; ?>>Non-Priority Cases</option>
                             </select>
                         </div>
                         
@@ -450,7 +387,7 @@ if ($stages_result) {
                         </div>
                         
                         <!-- Clear Filters -->
-                        <?php if (!empty($search_query) || !empty($case_type_filter) || !empty($status_filter) || !empty($from_date) || !empty($to_date) || $priority_filter !== '' || $cnr_filter !== ''): ?>
+                        <?php if (!empty($search_query) || !empty($case_type_filter) || !empty($status_filter) || !empty($from_date) || !empty($to_date) || $priority_filter !== ''): ?>
                             <div class="flex items-end">
                                 <a href="cause-list.php" 
                                    class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-center font-medium">
@@ -475,40 +412,46 @@ if ($stages_result) {
                         <table class="w-full" id="casesTable">
                             <thead class="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Case ID / Case No
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Case ID
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Previous Date
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Case No
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Court Name
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Customer Name
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Accused/Opposite Party
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         CNR Number
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Fixed Date
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                        Case Type / Status
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Case Type
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Latest Stage
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Fee (Total / Balance)
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Priority
                                     </th>
-                                    <th class="px-2 py-1 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                         Actions
                                     </th>
                                 </tr>
@@ -516,15 +459,12 @@ if ($stages_result) {
                             <tbody class="divide-y divide-gray-200" id="casesTableBody">
                                 <?php foreach ($cases as $case): ?>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="px-2 py-1">
-                                            <div class="text-sm font-medium text-blue-600">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-medium text-blue-600">
                                                 <?php echo htmlspecialchars($case['unique_case_id'] ?? 'N/A'); ?>
-                                            </div>
-                                            <div class="text-sm text-gray-700">
-                                                <?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?>
-                                            </div>
+                                            </span>
                                         </td>
-                                        <td class="px-2 py-1 whitespace-nowrap">
+                                        <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm text-gray-900 font-semibold">
                                                 <?php 
                                                 // Show previous position date if exists, otherwise show filing date
@@ -542,12 +482,17 @@ if ($stages_result) {
                                                 ?>
                                             </span>
                                         </td>
-                                        <td class="px-2 py-1">
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm text-gray-900">
+                                                <?php echo htmlspecialchars($case['case_no'] ?? 'N/A'); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
                                             <span class="text-sm text-gray-700">
                                                 <?php echo htmlspecialchars($case['court_name'] ?? 'N/A'); ?>
                                             </span>
                                         </td>
-                                        <td class="px-2 py-1">
+                                        <td class="px-6 py-4">
                                             <span class="text-sm text-gray-900">
                                                 <?php echo htmlspecialchars($case['customer_name'] ?? 'N/A'); ?>
                                             </span>
@@ -558,7 +503,7 @@ if ($stages_result) {
                                                 </span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="px-2 py-1">
+                                        <td class="px-6 py-4">
                                             <span class="text-sm text-gray-900">
                                                 <?php 
                                                 $plaintiffs = htmlspecialchars($case['plaintiff_parties'] ?? '');
@@ -576,12 +521,12 @@ if ($stages_result) {
                                                 ?>
                                             </span>
                                         </td>
-                                        <td class="px-2 py-1 whitespace-nowrap">
+                                        <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm text-gray-900 font-semibold">
                                                 <?php echo htmlspecialchars($case['cnr_number'] ?? 'N/A'); ?>
                                             </span>
                                         </td>
-                                        <td class="px-2 py-1 whitespace-nowrap">
+                                        <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm text-gray-900 font-semibold">
                                                 <?php 
                                                 $display_date = $case['latest_position_date'] ?: $case['filing_date'];
@@ -598,81 +543,61 @@ if ($stages_result) {
                                                 ?>
                                             </span>
                                         </td>
-                                        <td class="px-2 py-1">
-                                            <div class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex px-3 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                                                 <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $case['case_type']))); ?>
-                                            </div>
-                                                <?php
-                                                $status = $case['status'];
-                                                $status_colors = [
-                                                    'active' => 'bg-green-100 text-green-800',
-                                                    'closed' => 'bg-gray-100 text-gray-800',
-                                                    'pending' => 'bg-yellow-100 text-yellow-800'
-                                                ];
-                                                $color_class = $status_colors[$status] ?? 'bg-blue-100 text-blue-800';
-                                                ?>
-                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full <?php echo $color_class; ?>">
-                                                    <?php echo ucfirst($status); ?>
-                                                </span>
+                                            </span>
                                         </td>
-                                        <td class="px-2 py-1">
+                                        <td class="px-6 py-4">
                                             <?php if ($case['latest_position']): ?>
-                                                <span class="inline-flex px-2 py-0 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                                <span class="inline-flex px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                                                     <i class="fas fa-tasks mr-1"></i><?php echo htmlspecialchars($case['latest_position']); ?>
                                                 </span>
-                                                <?php if (!empty($case['latest_remark'])): ?>
-                                                    <div class="mt-0 text-xs text-gray-600 leading-relaxed">
-                                                        <i class="fas fa-comment-dots mr-1 text-gray-500"></i><?php echo nl2br(htmlspecialchars($case['latest_remark'])); ?>
-                                                    </div>
-                                                <?php endif; ?>
                                             <?php else: ?>
                                                 <span class="text-sm text-gray-400">No Updates</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="px-2 py-1">
+                                        <td class="px-6 py-4">
                                             <div class="text-sm">
                                                 <div class="font-semibold text-gray-900">
                                                     Total: <span class="text-green-600">₹<?php echo number_format($case['total_fees'], 2); ?></span>
                                                 </div>
-                                                <div class="text-gray-700 mt-0">
+                                                <div class="text-gray-700 mt-1">
                                                     Balance: <span class="<?php echo $case['balance_fees'] > 0 ? 'text-orange-600' : 'text-gray-500'; ?> font-semibold">₹<?php echo number_format($case['balance_fees'], 2); ?></span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-2 py-1 whitespace-nowrap">
-                                            <?php 
-                                            $btn_title = 'Not Priority';
-                                            if ($case['priority_status'] == 1 && $case['priority_status_second'] == 1) {
-                                                $btn_title = '1st & 2nd Priority';
-                                            } elseif ($case['priority_status'] == 1) {
-                                                $btn_title = '1st Priority';
-                                            } elseif ($case['priority_status_second'] == 1) {
-                                                $btn_title = '2nd Priority';
-                                            }
-                                            ?>
-                                            <button onclick="openPriorityModal(<?php echo $case['id']; ?>, <?php echo htmlspecialchars(json_encode($case['unique_case_id']), ENT_QUOTES, 'UTF-8'); ?>, <?php echo $case['priority_status']; ?>, <?php echo $case['priority_status_second']; ?>, <?php echo htmlspecialchars(json_encode($case['remark'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>)" 
-                                                    class="p-1 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded transition inline-flex items-center gap-1" title="<?php echo $btn_title; ?>">
-                                                <?php if ($case['priority_status'] == 1 || $case['priority_status_second'] == 1): ?>
-                                                    <?php if ($case['priority_status'] == 1): ?>
-                                                        <i class="fas fa-star text-red-500 text-xs"></i>
-                                                    <?php endif; ?>
-                                                    <?php if ($case['priority_status_second'] == 1): ?>
-                                                        <i class="fas fa-star text-blue-500 text-xs"></i>
-                                                    <?php endif; ?>
-                                                <?php else: ?>
-                                                    <i class="far fa-star text-gray-400 text-xs"></i>
-                                                <?php endif; ?>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <button onclick="openPriorityModal(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>', <?php echo $case['priority_status']; ?>, '<?php echo htmlspecialchars($case['remark'] ?? ''); ?>')" 
+                                                    class="px-3 py-2 <?php echo $case['priority_status'] == 1 ? 'bg-red-500' : 'bg-gray-400'; ?> text-white text-sm font-medium rounded-lg hover:opacity-80 transition">
+                                                <i class="fas fa-star mr-1"></i><?php echo $case['priority_status'] == 1 ? 'Priority' : 'Not Priority'; ?>
                                             </button>
                                         </td>
-                                        <td class="px-2 py-1 whitespace-nowrap">
-                                            <div class="space-y-2">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <?php
+                                            $status = $case['status'];
+                                            $status_colors = [
+                                                'active' => 'bg-green-100 text-green-800',
+                                                'closed' => 'bg-gray-100 text-gray-800',
+                                                'pending' => 'bg-yellow-100 text-yellow-800'
+                                            ];
+                                            $color_class = $status_colors[$status] ?? 'bg-blue-100 text-blue-800';
+                                            ?>
+                                            <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full <?php echo $color_class; ?>">
+                                                <?php echo ucfirst($status); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center gap-2">
                                                 <a href="case-details.php?id=<?php echo $case['id']; ?>" 
-                                                   class="block w-full px-2 py-1 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition duration-200 text-center">
-                                                    <i class="fas fa-eye mr-1"></i>View
+                                                   class="px-3 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition duration-200 flex items-center gap-1">
+                                                    <i class="fas fa-eye"></i>
+                                                    View
                                                 </a>
                                                 <button onclick="openUpdateModal(<?php echo $case['id']; ?>, '<?php echo htmlspecialchars($case['unique_case_id']); ?>', '<?php echo htmlspecialchars($case['case_type']); ?>')" 
-                                                        class="w-full px-2 py-1 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition duration-200">
-                                                    <i class="fas fa-edit mr-1"></i>Update
+                                                        class="px-3 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition duration-200 flex items-center gap-1">
+                                                    <i class="fas fa-edit"></i>
+                                                    Update
                                                 </button>
                                             </div>
                                         </td>
@@ -697,7 +622,6 @@ if ($stages_result) {
                             if (!empty($from_date)) $query_params['from_date'] = $from_date;
                             if (!empty($to_date)) $query_params['to_date'] = $to_date;
                             if ($priority_filter !== '') $query_params['priority'] = $priority_filter;
-                            if ($cnr_filter !== '') $query_params['cnr_status'] = $cnr_filter;
                             $query_params['entries_per_page'] = $entries_per_page;
                             
                             function build_pagination_url($page_num, $params) {
@@ -713,19 +637,19 @@ if ($stages_result) {
                                 <?php 
                                 // Show first page
                                 if ($total_pages > 0) {
-                                    $btn_class = $current_page === 1 ? 'px-2 py-1 bg-blue-500 text-white rounded-lg font-semibold' : 'px-2 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+                                    $btn_class = $current_page === 1 ? 'px-3 py-2 bg-blue-500 text-white rounded-lg font-semibold' : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
                                     echo '<a href="' . build_pagination_url(1, $query_params) . '" class="' . $btn_class . '">1</a>';
                                 }
                                 
                                 // Show pages around current page
                                 for ($i = max(2, $current_page - 1); $i <= min($total_pages - 1, $current_page + 1); $i++) {
-                                    $btn_class = $current_page === $i ? 'px-2 py-1 bg-blue-500 text-white rounded-lg font-semibold' : 'px-2 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+                                    $btn_class = $current_page === $i ? 'px-3 py-2 bg-blue-500 text-white rounded-lg font-semibold' : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
                                     echo '<a href="' . build_pagination_url($i, $query_params) . '" class="' . $btn_class . '">' . $i . '</a>';
                                 }
                                 
                                 // Show last page
                                 if ($total_pages > 1) {
-                                    $btn_class = $current_page === $total_pages ? 'px-2 py-1 bg-blue-500 text-white rounded-lg font-semibold' : 'px-2 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
+                                    $btn_class = $current_page === $total_pages ? 'px-3 py-2 bg-blue-500 text-white rounded-lg font-semibold' : 'px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition';
                                     echo '<a href="' . build_pagination_url($total_pages, $query_params) . '" class="' . $btn_class . '">' . $total_pages . '</a>';
                                 }
                                 ?>
@@ -838,22 +762,15 @@ if ($stages_result) {
                     <input type="text" id="priorityCaseIdDisplay" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
                 </div>
                 
-                <div class="mb-6 space-y-4">
-                                                    <div class="flex items-center">
-                                                        <input type="checkbox" id="priorityStatus" name="priority_status" 
-                                                               class="w-5 h-5 text-red-500 rounded focus:ring-2 focus:ring-red-500 cursor-pointer">
-                                                        <label for="priorityStatus" class="ml-3 text-gray-700 font-semibold cursor-pointer">
-                                                            <i class="fas fa-star text-red-500 mr-2"></i>Mark as First Priority
-                                                        </label>
-                                                    </div>
-                                                    <div class="flex items-center">
-                                                        <input type="checkbox" id="priorityStatusSecond" name="priority_status_second" 
-                                                               class="w-5 h-5 text-blue-500 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                                                        <label for="priorityStatusSecond" class="ml-3 text-gray-700 font-semibold cursor-pointer">
-                                                            <i class="fas fa-star text-blue-500 mr-2"></i>Mark as Second Priority
-                                                        </label>
-                                                    </div>
-                                                </div>
+                <div class="mb-6">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="priorityStatus" name="priority_status" 
+                               class="w-5 h-5 text-red-500 rounded focus:ring-2 focus:ring-red-500 cursor-pointer">
+                        <label for="priorityStatus" class="ml-3 text-gray-700 font-semibold cursor-pointer">
+                            <i class="fas fa-star text-red-500 mr-2"></i>Mark as Priority
+                        </label>
+                    </div>
+                </div>
                 
                 <div class="mb-6">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Remark</label>
@@ -900,8 +817,7 @@ if ($stages_result) {
                 search: searchParams.get('search') || '',
                 from_date: searchParams.get('from_date') || '',
                 to_date: searchParams.get('to_date') || '',
-                priority: searchParams.get('priority') || '',
-                cnr_status: searchParams.get('cnr_status') || ''
+                priority: searchParams.get('priority') || ''
             };
             
             // Build query string
@@ -926,8 +842,7 @@ if ($stages_result) {
                 search: searchParams.get('search') || '',
                 from_date: searchParams.get('from_date') || '',
                 to_date: searchParams.get('to_date') || '',
-                priority: searchParams.get('priority') || '',
-                cnr_status: searchParams.get('cnr_status') || ''
+                priority: searchParams.get('priority') || ''
             };
             
             // Build query string
@@ -962,11 +877,10 @@ if ($stages_result) {
         }
         
         // Priority Modal Functions
-        function openPriorityModal(caseId, caseIdDisplay, priorityStatus, priorityStatusSecond, remark) {
+        function openPriorityModal(caseId, caseIdDisplay, priorityStatus, remark) {
             document.getElementById('priorityCaseId').value = caseId;
             document.getElementById('priorityCaseIdDisplay').value = caseIdDisplay;
             document.getElementById('priorityStatus').checked = priorityStatus == 1;
-            document.getElementById('priorityStatusSecond').checked = priorityStatusSecond == 1;
             document.getElementById('priorityRemark').value = remark || '';
             document.getElementById('priorityModal').classList.remove('hidden');
         }
@@ -978,14 +892,12 @@ if ($stages_result) {
         function submitPriority() {
             const caseId = document.getElementById('priorityCaseId').value;
             const priorityStatus = document.getElementById('priorityStatus').checked ? 1 : 0;
-            const priorityStatusSecond = document.getElementById('priorityStatusSecond').checked ? 1 : 0;
             const remark = document.getElementById('priorityRemark').value;
             
             // Prepare form data
             const formData = new FormData();
             formData.append('case_id', caseId);
             formData.append('priority_status', priorityStatus);
-            formData.append('priority_status_second', priorityStatusSecond);
             formData.append('remark', remark);
             
             // Submit via AJAX

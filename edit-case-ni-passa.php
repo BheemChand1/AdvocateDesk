@@ -560,16 +560,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Bounce Reason</label>
-                                <select name="bounce_reason" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Select bounce reason</option>
-                                    <option value="Fund Insufficient" <?php echo ($case_details['bounce_reason'] ?? '') === 'Fund Insufficient' ? 'selected' : ''; ?>>Fund Insufficient</option>
-                                    <option value="Account Closed" <?php echo ($case_details['bounce_reason'] ?? '') === 'Account Closed' ? 'selected' : ''; ?>>Account Closed</option>
-                                    <option value="Signature Mismatch" <?php echo ($case_details['bounce_reason'] ?? '') === 'Signature Mismatch' ? 'selected' : ''; ?>>Signature Mismatch</option>
-                                    <option value="Stop Payment" <?php echo ($case_details['bounce_reason'] ?? '') === 'Stop Payment' ? 'selected' : ''; ?>>Stop Payment</option>
-                                    <option value="Exceeds Arrangement" <?php echo ($case_details['bounce_reason'] ?? '') === 'Exceeds Arrangement' ? 'selected' : ''; ?>>Exceeds Arrangement</option>
-                                    <option value="Account Frozen" <?php echo ($case_details['bounce_reason'] ?? '') === 'Account Frozen' ? 'selected' : ''; ?>>Account Frozen</option>
-                                    <option value="Other" <?php echo ($case_details['bounce_reason'] ?? '') === 'Other' ? 'selected' : ''; ?>>Other</option>
-                                </select>
+                                <input type="text" name="bounce_reason" value="<?php echo htmlspecialchars($case_details['bounce_reason'] ?? ''); ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter bounce reason">
                             </div>
                             <div>
                                 <label class="block text-gray-700 text-sm font-semibold mb-1">Notice Date</label>

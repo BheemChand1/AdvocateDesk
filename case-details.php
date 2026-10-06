@@ -33,7 +33,7 @@ if (!$case_data) {
 }
 
 // Redirect to the appropriate case-type specific page (robust mapping)
-$basePath = '/clients/';
+$basePath = '/';
 $case_type = strtolower(trim($case_data['case_type'] ?? ''));
 $target = '';
 

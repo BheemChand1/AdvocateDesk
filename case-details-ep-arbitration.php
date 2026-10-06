@@ -97,9 +97,9 @@ while ($row = mysqli_fetch_assoc($result)) {
         <main class="px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
             <!-- Back Button and Header -->
             <div class="mb-8">
-                <a href="view-cases.php" class="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4 transition">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Cases
-                </a>
+                <button onclick="history.back()" class="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4 transition cursor-pointer bg-none border-none p-0 font-normal">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Previous Page
+                </button>
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h1 class="text-3xl font-bold text-gray-800 mb-2">
@@ -116,6 +116,10 @@ while ($row = mysqli_fetch_assoc($result)) {
                         ?> rounded-lg text-sm font-bold">
                             <i class="fas fa-flag mr-2"></i><?php echo htmlspecialchars(ucfirst($case['status'])); ?>
                         </span>
+                        <a href="print-case-details.php?id=<?php echo $case['id']; ?>" target="_blank"
+                            class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
+                            <i class="fas fa-print mr-2"></i>Print
+                        </a>
                         <a href="edit-case-ep-arbitration.php?id=<?php echo $case['id']; ?>" 
                             class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition">
                             <i class="fas fa-edit mr-2"></i>Edit Case
@@ -133,6 +137,17 @@ while ($row = mysqli_fetch_assoc($result)) {
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- CNR Number -->
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-barcode text-red-600 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">CNR Number</p>
+                            <p class="text-lg font-bold text-gray-800 font-mono"><?php echo htmlspecialchars($case['cnr_number'] ?? '-'); ?></p>
+                        </div>
+                    </div>
+
                     <!-- Loan Number -->
                     <div class="flex items-start">
                         <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
@@ -254,7 +269,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                             <i class="fas fa-building text-indigo-600 text-lg"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500 mb-1">Court Number</p>
+                            <p class="text-sm text-gray-500 mb-1">Court Name</p>
                             <p class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($case_details['court_no'] ?? '-'); ?></p>
                         </div>
                     </div>
@@ -709,8 +724,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                                             </div>
                                         <?php endif; ?>
                                         
-                                        <div class="mt-2 text-xs text-gray-500">
-                                            <i class="fas fa-clock mr-1"></i>Updated on <?php echo date('d M, Y h:i A', strtotime($update['created_at'])); ?>
+                                        <div class="mt-3 flex items-center justify-between">
+                                            <div class="text-xs text-gray-500">
+                                                <i class="fas fa-clock mr-1"></i>Updated on <?php echo date('d M, Y h:i A', strtotime($update['created_at'])); ?>
+                                            </div>
+                                            <button onclick="deletePosition(<?php echo $update['id']; ?>, <?php echo $case_id; ?>)" 
+                                                    class="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded hover:bg-red-600 transition flex items-center gap-1">
+                                                <i class="fas fa-trash"></i>Delete
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -807,19 +828,39 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <?php endif; ?>
             </div>
             </div>
-
-            <!-- Action Buttons -->
-            <div class="mt-6 flex flex-col sm:flex-row items-center justify-end gap-4">
-                <button class="w-full sm:w-auto px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition shadow-lg">
-                    <i class="fas fa-trash mr-2"></i>Delete Case
-                </button>
-            </div>
         </main>
 
         <?php include './includes/footer.php'; ?>
     </div>
 
     <script src="./assets/script.js"></script>
+    <script>
+        function deletePosition(positionId, caseId) {
+            if (confirm('Are you sure you want to delete this stage? This action cannot be undone.')) {
+                const formData = new FormData();
+                formData.append('position_id', positionId);
+                formData.append('case_id', caseId);
+                
+                fetch('delete-case-position.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Stage deleted successfully!');
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Error deleting stage');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the stage');
+                });
+            }
+        }
+    </script>
 </body>
 
 </html>

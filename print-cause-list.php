@@ -27,6 +27,7 @@ $query = "SELECT
     c.status,
     c.location,
     c.priority_status,
+    c.priority_status_second,
     c.remark,
     cl.name as customer_name,
     cl.mobile,
@@ -48,15 +49,20 @@ $query = "SELECT
         ni.court_name,
         cr.court_name,
         cc.court_name,
-        '',
-        ''
+        ep.court_no,
+        ao.court_no
     ) as court_name,
     (SELECT GROUP_CONCAT(DISTINCT CASE 
+        WHEN party_type IN ('complainant', 'decree_holder', 'plaintiff') THEN name 
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as plaintiff_parties,
+    (SELECT GROUP_CONCAT(DISTINCT CASE 
         WHEN party_type IN ('accused', 'defendant') THEN name 
-    END SEPARATOR ', ') 
-    FROM case_parties WHERE case_id = c.id) as accused_opposite_party,
+    END ORDER BY is_primary DESC SEPARATOR ', ') 
+    FROM case_parties WHERE case_id = c.id) as defendant_parties,
     latest.update_date as latest_position_date,
     latest.position as latest_position,
+    latest.remarks as latest_remark,
     previous.update_date as previous_position_date,
     previous.position as previous_position,
     (SELECT COALESCE(SUM(fee_amount), 0) FROM case_fee_grid WHERE case_id = c.id) as total_fees,
@@ -70,7 +76,7 @@ LEFT JOIN case_consumer_civil_details cc ON c.id = cc.case_id
 LEFT JOIN case_ep_arbitration_details ep ON c.id = ep.case_id
 LEFT JOIN case_arbitration_other_details ao ON c.id = ao.case_id
 LEFT JOIN (
-    SELECT case_id, update_date, position
+    SELECT case_id, update_date, position, remarks
     FROM case_position_updates
     WHERE (case_id, update_date) IN (
         SELECT case_id, MAX(update_date)
@@ -100,7 +106,9 @@ if (!empty($search_query)) {
         c.loan_number LIKE '$search' OR
         c.unique_case_id LIKE '$search' OR
         cl.name LIKE '$search' OR
-        c.cnr_number LIKE '$search'
+        c.cnr_number LIKE '$search' OR
+        COALESCE(ni.case_no, cr.case_no, cc.case_no, ep.case_no, ao.case_no) LIKE '$search' OR
+        EXISTS (SELECT 1 FROM case_parties WHERE case_id = c.id AND name LIKE '$search')
     )";
 }
 
@@ -113,19 +121,43 @@ if ($status_filter) {
 }
 
 if ($from_date) {
-    $query .= " AND COALESCE(latest.update_date, filing_date) >= '" . mysqli_real_escape_string($conn, $from_date) . "'";
+    $query .= " AND COALESCE(latest.update_date, ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date) >= '" . mysqli_real_escape_string($conn, $from_date) . "'";
 }
 
 if ($to_date) {
-    $query .= " AND COALESCE(latest.update_date, filing_date) <= '" . mysqli_real_escape_string($conn, $to_date) . "'";
+    $query .= " AND COALESCE(latest.update_date, ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date) <= '" . mysqli_real_escape_string($conn, $to_date) . "'";
 }
 
 if ($priority_filter !== '') {
-    $query .= " AND c.priority_status = " . intval($priority_filter);
+    if ($priority_filter === '1' || $priority_filter === 'first') {
+        $query .= " AND c.priority_status = 1";
+    } elseif ($priority_filter === '2' || $priority_filter === 'second') {
+        $query .= " AND c.priority_status_second = 1";
+    } elseif ($priority_filter === 'both') {
+        $query .= " AND c.priority_status = 1 AND c.priority_status_second = 1";
+    } elseif ($priority_filter === 'any') {
+        $query .= " AND (c.priority_status = 1 OR c.priority_status_second = 1)";
+    } elseif ($priority_filter === '0' || $priority_filter === 'none') {
+        $query .= " AND c.priority_status = 0 AND c.priority_status_second = 0";
+    } else {
+        $query .= " AND c.priority_status = " . intval($priority_filter);
+    }
 }
 
 $query .= " GROUP BY c.id
-ORDER BY COALESCE(latest.update_date, COALESCE(ni.filing_date, cr.filing_date, cc.case_filling_date, ep.date_of_filing, ao.filing_date)) DESC";
+ORDER BY CASE WHEN COALESCE(latest.update_date, COALESCE(
+    ni.filing_date,
+    cr.filing_date,
+    cc.case_filling_date,
+    ep.date_of_filing,
+    ao.filing_date
+)) > CURDATE() THEN 1 ELSE 0 END ASC, COALESCE(latest.update_date, COALESCE(
+    ni.filing_date,
+    cr.filing_date,
+    cc.case_filling_date,
+    ep.date_of_filing,
+    ao.filing_date
+)) DESC, c.created_at DESC";
 
 $result = mysqli_query($conn, $query);
 $cases = [];
@@ -156,20 +188,70 @@ body {
 }
 
 .print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #000;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+}
+
+.print-header-left {
+    flex: 1;
+}
+
+.print-header-left h2 {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: #000;
+}
+
+.print-header-left p {
+    font-size: 12px;
+    font-weight: bold;
+    margin: 3px 0;
+    color: #000;
+}
+
+.print-header-right {
+    text-align: right;
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.print-header-right img {
+    height: 70px;
+    width: auto;
+    display: block;
+}
+
+.print-header-title {
     text-align: center;
-    border-bottom: 2px solid #000;
-    margin-bottom: 8px;
-    padding-bottom: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 10px 0 5px 0;
 }
 
-.print-header h1 {
-    font-size: 20px;
-    margin: 0;
-}
-
-.print-header p {
-    font-size: 11px;
-    margin: 2px 0 0;
+@media (max-width: 600px) {
+    .print-header {
+        flex-direction: column;
+        text-align: center;
+        padding-bottom: 15px;
+    }
+    
+    .print-header-left {
+        margin-bottom: 15px;
+    }
+    
+    .print-header-right {
+        margin-left: 0;
+    }
+    
+    .print-header-right img {
+        height: 60px;
+        margin: 0 auto;
+    }
 }
 
 table {
@@ -192,6 +274,14 @@ th {
     background: #f0f0f0;
 }
 
+td.next-date-cell {
+    min-height: 40px;
+    padding: 12px 6px;
+    vertical-align: top;
+    width: 120px;
+    min-width: 120px;
+}
+
 tr {
     page-break-inside: avoid;
 }
@@ -210,9 +300,18 @@ tr {
 <div class="print-container">
 
 <div class="print-header">
-    <h1>Cause List</h1>
-    <p>Generated on <?= date('d M, Y H:i'); ?></p>
+    <div class="print-header-left">
+        <h2>Gaurav Sharma, Advocate</h2>
+        <p>Dehradun</p>
+        <p>Mob. 9411119967</p>
+    </div>
+    <div class="print-header-right">
+        <img src="./assets/mps-logo.png" alt="MPS Legal Logo">
+    </div>
 </div>
+
+<div class="print-header-title">Cause List</div>
+<p style="text-align:center;font-size:11px;margin:3px 0 10px 0;">Generated on <?= date('d M, Y H:i'); ?></p>
 
 <?php if ($cases): ?>
 <table>
@@ -228,8 +327,7 @@ tr {
     <th>Fixed Date</th>
     <th>Type</th>
     <th>Stage</th>
-    <th>Total</th>
-    <th>Balance</th>
+    <th>Next Date</th>
 </tr>
 </thead>
 <tbody>
@@ -240,19 +338,35 @@ tr {
 <td><?= htmlspecialchars($c['case_no'] ?? 'N/A') ?></td>
 <td><?= htmlspecialchars($c['court_name'] ?? 'N/A') ?></td>
 <td><?= htmlspecialchars($c['customer_name']) ?><br><small><?= $c['mobile'] ?></small></td>
-<td><?= htmlspecialchars($c['accused_opposite_party'] ?? 'N/A') ?></td>
+<td><?php 
+$plaintiffs = htmlspecialchars($c['plaintiff_parties'] ?? '');
+$defendants = htmlspecialchars($c['defendant_parties'] ?? '');
+if ($plaintiffs && $defendants) {
+    echo $plaintiffs . ' <strong>vs</strong> ' . $defendants;
+} elseif ($plaintiffs) {
+    echo $plaintiffs;
+} elseif ($defendants) {
+    echo $defendants;
+} else {
+    echo 'N/A';
+}
+?></td>
 <td><?= htmlspecialchars($c['cnr_number'] ?? 'N/A') ?></td>
 <td><?= date('d M Y', strtotime($c['latest_position_date'] ?? $c['filing_date'])) ?></td>
 <td><?= ucwords(str_replace('-', ' ', $c['case_type'])) ?></td>
-<td><?= $c['latest_position'] ?? 'No Update' ?></td>
-<td class="text-green">₹<?= number_format($c['total_fees'],2) ?></td>
-<td class="<?= $c['balance_fees'] > 0 ? 'text-orange' : '' ?>">₹<?= number_format($c['balance_fees'],2) ?></td>
+<td>
+    <?= htmlspecialchars($c['latest_position'] ?? 'No Update') ?>
+    <?php if (!empty($c['latest_remark'])): ?>
+        <br><small><?= nl2br(htmlspecialchars($c['latest_remark'])) ?></small>
+    <?php endif; ?>
+</td>
+<td class="next-date-cell"></td>
 </tr>
 <?php endforeach; ?>
 </tbody>
 </table>
 
-<p style="text-align:center;margin-top:15px;">
+<p style="text-align:center;margin-top:15px;font-size:12px;">
 Total Cases: <?= count($cases) ?><br>
 <button onclick="window.print()">Print</button>
 </p>
